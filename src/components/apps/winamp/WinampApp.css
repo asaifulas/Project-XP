@@ -1,0 +1,492 @@
+.winamp-root {
+  --wa-bg: #1a1c24;
+  --wa-panel: #252830;
+  --wa-border: #c9a227;
+  --wa-border-dim: #6b5a2e;
+  --wa-green: #00ff66;
+  --wa-green-dim: #00aa44;
+  --wa-yellow: #e8d040;
+  --wa-text: #c8ccd4;
+  --wa-silver: #9aa0ac;
+  --wa-track: #0d0e12;
+
+  font-family: Tahoma, 'MS Sans Serif', Geneva, sans-serif;
+  font-size: 9px;
+  color: var(--wa-text);
+  line-height: 1.15;
+  user-select: none;
+}
+
+.winamp-skin {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--wa-bg);
+  border: 1px solid var(--wa-border-dim);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.winamp-module {
+  border: 1px solid var(--wa-border);
+  background: linear-gradient(180deg, #2e323c 0%, #1e2128 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.winamp-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 14px;
+  padding: 0 2px 0 4px;
+  background: linear-gradient(180deg, #4a5060 0%, #2a2e38 55%, #1f2229 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+.winamp-titlebar-drag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  cursor: move;
+}
+
+.winamp-titlebar.inactive {
+  cursor: default;
+  opacity: 0.92;
+}
+
+.winamp-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #e8e4dc;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+}
+
+.winamp-title-controls {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.winamp-sysbtn {
+  width: 12px;
+  height: 11px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #1a1a1a;
+  background: linear-gradient(180deg, #6a6f7a 0%, #3a3e48 100%);
+  color: #ddd;
+  font-size: 8px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.2),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.winamp-sysbtn:hover {
+  filter: brightness(1.08);
+}
+
+.winamp-sysbtn:active {
+  box-shadow:
+    inset -1px -1px 0 rgba(255, 255, 255, 0.15),
+    inset 1px 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.winamp-main-body {
+  padding: 4px 5px 5px;
+}
+
+.winamp-row-top {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 4px;
+  align-items: start;
+  margin-bottom: 3px;
+}
+
+.winamp-time {
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wa-green);
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.35);
+  letter-spacing: 0.02em;
+}
+
+.winamp-vis {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1px;
+  height: 12px;
+  margin-top: 2px;
+  padding: 0 1px;
+}
+
+.winamp-vis-bar {
+  flex: 1;
+  min-width: 2px;
+  max-width: 4px;
+  background: linear-gradient(180deg, #ff4444 0%, #ffff00 45%, #00ff44 100%);
+  border-radius: 0;
+  transition: height 0.05s linear;
+}
+
+.winamp-scroll-wrap {
+  overflow: hidden;
+  height: 28px;
+  border: 1px inset #0a0a0c;
+  background: #0a0b0e;
+  padding: 2px 4px;
+}
+
+.winamp-scroll-text {
+  white-space: nowrap;
+  color: var(--wa-green);
+  font-size: 9px;
+  animation: winamp-marquee 14s linear infinite;
+}
+
+@keyframes winamp-marquee {
+  0% {
+    transform: translateX(4%);
+  }
+  100% {
+    transform: translateX(-62%);
+  }
+}
+
+.winamp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 2px;
+  font-size: 9px;
+  color: var(--wa-silver);
+}
+
+.winamp-meta .st {
+  color: var(--wa-green);
+}
+
+.winamp-sliders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  margin-top: 4px;
+  align-items: center;
+}
+
+.winamp-slider-label {
+  font-size: 8px;
+  color: var(--wa-silver);
+}
+
+.winamp-hslider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(90deg, #00aa44 0%, #aa2222 100%);
+  border: 1px solid #111;
+  border-radius: 0;
+}
+
+.winamp-hslider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(180deg, #d0d4dc 0%, #787c84 100%);
+  border: 1px solid #222;
+  box-shadow:
+    inset 1px 1px 0 #fff,
+    inset -1px -1px 0 #333;
+  cursor: pointer;
+}
+
+.winamp-hslider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(180deg, #d0d4dc 0%, #787c84 100%);
+  border: 1px solid #222;
+  cursor: pointer;
+}
+
+.winamp-toggles {
+  display: flex;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.winamp-chip {
+  font-size: 8px;
+  padding: 1px 4px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #454a54 0%, #2a2d34 100%);
+  color: #bbb;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.12),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.winamp-chip.on {
+  color: var(--wa-green);
+  border-color: #2a5a3a;
+}
+
+.winamp-seek {
+  margin: 4px 0 3px;
+}
+
+.winamp-seek input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: var(--wa-track);
+  border: 1px solid #111;
+}
+
+.winamp-seek input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 9px;
+  background: linear-gradient(180deg, #e8d88a 0%, #a68b32 100%);
+  border: 1px solid #4a3d12;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.winamp-seek input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 9px;
+  background: linear-gradient(180deg, #e8d88a 0%, #a68b32 100%);
+  border: 1px solid #4a3d12;
+  cursor: pointer;
+}
+
+.winamp-transport {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.winamp-tpb {
+  width: 23px;
+  height: 18px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #0a0a0a;
+  background: linear-gradient(180deg, #c5c9d4 0%, #7a7e88 45%, #4a4e58 100%);
+  color: #111;
+  font-size: 10px;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.55),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.winamp-tpb:active:not(:disabled) {
+  box-shadow:
+    inset -1px -1px 0 rgba(255, 255, 255, 0.25),
+    inset 1px 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.winamp-tpb:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.winamp-opt {
+  font-size: 7px;
+  padding: 2px 3px;
+  margin-left: 2px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #4a4e58 0%, #2a2d34 100%);
+  color: #ccc;
+  cursor: pointer;
+}
+
+.winamp-opt.on {
+  color: var(--wa-yellow);
+}
+
+.winamp-eq-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 3px;
+  gap: 4px;
+}
+
+.winamp-eq-preset {
+  font-size: 8px;
+  padding: 1px 5px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #454a54 0%, #2a2d34 100%);
+  color: #ccc;
+  cursor: pointer;
+}
+
+.winamp-eq-sliders {
+  display: flex;
+  justify-content: space-between;
+  gap: 1px;
+  padding: 2px 3px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.winamp-eq-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.winamp-eq-label {
+  font-size: 6px;
+  color: var(--wa-silver);
+  margin-bottom: 1px;
+  text-align: center;
+}
+
+.winamp-vslider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 48px;
+  height: 4px;
+  transform: rotate(-90deg) translateX(-22px);
+  transform-origin: center;
+  background: linear-gradient(90deg, #3a3a1a 0%, #e8d040 40%, #3a3a1a 100%);
+  border: 1px solid #111;
+}
+
+.winamp-vslider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 8px;
+  height: 10px;
+  background: linear-gradient(180deg, #e8ecf4 0%, #888c94 100%);
+  border: 1px solid #222;
+  box-shadow:
+    inset 1px 1px 0 #fff,
+    inset -1px -1px 0 #444;
+  cursor: pointer;
+}
+
+.winamp-vslider::-moz-range-thumb {
+  width: 8px;
+  height: 10px;
+  background: linear-gradient(180deg, #e8ecf4 0%, #888c94 100%);
+  border: 1px solid #222;
+  cursor: pointer;
+}
+
+.winamp-pl-list {
+  height: 112px;
+  overflow-y: auto;
+  background: #050608;
+  border: 1px inset #0a0a0c;
+  margin: 2px 4px 3px;
+  padding: 2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #c9a227 #1a1a12;
+}
+
+.winamp-pl-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.winamp-pl-list::-webkit-scrollbar-track {
+  background: #1a1810;
+  border-left: 1px solid #3a3520;
+}
+
+.winamp-pl-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #8a7530 0%, #d4b84a 50%, #8a7530 100%);
+  border: 1px solid #2a2410;
+}
+
+.winamp-pl-item {
+  display: flex;
+  align-items: baseline;
+  padding: 1px 4px 1px 6px;
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 9px;
+  color: var(--wa-green);
+  cursor: pointer;
+  gap: 4px;
+}
+
+.winamp-pl-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.winamp-pl-item.active {
+  color: #f0f4f8;
+  background: rgba(80, 90, 120, 0.35);
+}
+
+.winamp-pl-num {
+  opacity: 0.85;
+  min-width: 1.2em;
+}
+
+.winamp-pl-dur {
+  margin-left: auto;
+  padding-left: 4px;
+  opacity: 0.9;
+}
+
+.winamp-pl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 4px;
+  gap: 4px;
+}
+
+.winamp-pl-btns {
+  display: flex;
+  gap: 2px;
+}
+
+.winamp-pl-btn {
+  font-size: 7px;
+  padding: 1px 4px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #454a54 0%, #2a2d34 100%);
+  color: #ccc;
+  cursor: default;
+}
+
+.winamp-pl-time {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  color: var(--wa-green);
+}
+
+.winamp-bolt {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #ffff88 0%, #cc8800 100%);
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  filter: drop-shadow(0 0 2px rgba(255, 200, 0, 0.4));
+}
