@@ -3,6 +3,7 @@ export default function WindowControlButton({
   symbol,
   onClick,
   variant = 'default',
+  disabled = false,
 }) {
   const variantClass =
     variant === 'close'
@@ -14,8 +15,9 @@ export default function WindowControlButton({
       type="button"
       aria-label={label}
       title={label}
+      disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[3px] border border-black/60 text-[11px] font-bold leading-none text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] ${variantClass} ${variant === 'close' ? 'text-white' : ''}`}
+      className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[3px] border border-black/60 text-[11px] font-bold leading-none text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] ${variantClass} ${variant === 'close' ? 'text-white' : ''} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
     >
       {symbol}
     </button>

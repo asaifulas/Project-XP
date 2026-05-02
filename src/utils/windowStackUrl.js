@@ -1,7 +1,7 @@
 /** @typedef {{ pathname: string, search: string }} LocationLike */
 
 /** Routes that may appear in the window stack (not the bare desktop). */
-const STACK = new Set(['/about', '/biodata', '/calculator', '/winamp'])
+const STACK = new Set(['/about', '/biodata', '/journey', '/calculator', '/winamp', '/pdf', '/folder'])
 
 export function isStackablePath(pathname) {
   return STACK.has(pathname)
@@ -186,5 +186,6 @@ export function programIdForPath(pathname) {
   if (pathname === '/biodata') return 'win-biodata'
   if (pathname === '/calculator') return 'win-calculator'
   if (pathname === '/winamp') return 'win-winamp'
+  if (pathname === '/pdf') return 'win-pdf'
   return `win-${pathname.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'app'}`
 }

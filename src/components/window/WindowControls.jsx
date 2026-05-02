@@ -5,6 +5,7 @@ export default function WindowControls({
   onMinimize,
   onToggleMaximize,
   onClose,
+  maximizeDisabled = false,
 }) {
   return (
     <div className="inline-flex items-center gap-1">
@@ -13,6 +14,7 @@ export default function WindowControls({
         label={isMaximized ? 'Restore' : 'Maximize'}
         symbol={isMaximized ? '❐' : '□'}
         onClick={onToggleMaximize}
+        disabled={Boolean(maximizeDisabled && !isMaximized)}
       />
       <WindowControlButton
         label="Close"

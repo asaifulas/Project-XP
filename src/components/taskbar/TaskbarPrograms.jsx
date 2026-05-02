@@ -12,6 +12,7 @@ export default function TaskbarPrograms() {
         <TaskbarProgramButton
           key={p.id}
           title={p.title}
+          iconSrc={p.iconSrc ?? null}
           active={p.active}
           minimized={p.minimized}
           onActivate={() =>

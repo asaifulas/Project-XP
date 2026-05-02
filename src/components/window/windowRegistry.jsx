@@ -24,7 +24,10 @@ export function programIdForStackKey(key) {
 export function renderStackWindowBody(key, opts = {}) {
   const app = getAppFromStackKey(key)
   if (!app?.renderStack) return null
-  return app.renderStack({ keyboardActive: Boolean(opts.keyboardActive) })
+  return app.renderStack({
+    keyboardActive: Boolean(opts.keyboardActive),
+    app,
+  })
 }
 
 export function getWindowTitle(key) {
@@ -32,12 +35,19 @@ export function getWindowTitle(key) {
 }
 
 export function getWindowFrameOptions(key) {
-  return (
-    getAppFromStackKey(key)?.window ?? {
-      showMenuBar: true,
-      className: '',
-      chrome: 'xp',
-      shell: 'default',
-    }
-  )
+  const win = getAppFromStackKey(key)?.window
+  return {
+    showMenuBar: true,
+    className: '',
+    chrome: 'xp',
+    shell: 'default',
+    allowMaximize: true,
+    explorerAddressPath: undefined,
+    compactFrame: false,
+    ...win,
+  }
+}
+
+export function getWindowIconSrc(key) {
+  return getAppFromStackKey(key)?.icon ?? null
 }

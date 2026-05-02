@@ -86,13 +86,14 @@ export default function AppLayout({ children }) {
           />
         ) : null}
         <div className="relative z-10 h-full">
-          <div className="absolute left-3 top-3 z-20">
-            <div className="grid w-fit grid-cols-1 gap-2">
+          <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20">
+            <div className="pointer-events-auto flex h-full max-h-full max-w-[calc(100%-17.5rem)] flex-col flex-wrap content-start gap-x-3 gap-y-2">
               {getDesktopApps().map((app) => (
                 <DesktopIcon
                   key={app.id}
                   label={app.desktop.label}
                   iconSrc={app.icon}
+                  className="shrink-0"
                   onOpen={() =>
                     openForegroundPreserveStack(navigate, location, app.path, app.id)
                   }
@@ -219,7 +220,7 @@ export default function AppLayout({ children }) {
                 title="Display Properties"
                 onClose={() => setWallpaperSettingsOpen(false)}
                 showMenuBar={false}
-                className="pointer-events-auto w-[min(780px,calc(100%-24px))]"
+                className="pointer-events-auto"
               >
                 <div className="mb-3 flex gap-2 border-b border-[#b7b4a8] text-[11px]">
                   <span className="border border-[#b7b4a8] border-b-[#f8fafc] bg-[#f8fafc] px-3 py-1 font-semibold">

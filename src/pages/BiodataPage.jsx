@@ -22,11 +22,14 @@ export default function BiodataPage() {
       <WindowFrame
         programId={app ? `win-${app.id}` : 'win-biodata'}
         title={app?.title ?? 'Biodata'}
+        iconSrc={app?.icon ?? null}
         isActive
         stackIndex={others.length}
         showMenuBar={Boolean(win.showMenuBar ?? true)}
         className={win.className ?? ''}
+        chrome={win.chrome ?? 'xp'}
         shell={shell}
+        allowMaximize={win.allowMaximize ?? true}
         onClose={() => closeWindowAtPath(navigate, location, stackKey)}
       >
         <BiodataWindowContent />

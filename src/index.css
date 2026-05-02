@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;

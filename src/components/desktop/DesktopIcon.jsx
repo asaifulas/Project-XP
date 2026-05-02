@@ -33,7 +33,7 @@ export default function DesktopIcon({
           <img
             src={iconSrc}
             alt=""
-            className="h-12 w-12 select-none"
+            className="h-12 w-12 select-none object-contain"
             draggable="false"
           />
         ) : (

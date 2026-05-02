@@ -1,5 +1,6 @@
 export default function TaskbarProgramButton({
   title,
+  iconSrc,
   active,
   minimized,
   onActivate,
@@ -15,10 +16,19 @@ export default function TaskbarProgramButton({
       onClick={onActivate}
       title={title}
     >
-      <span
-        className="h-4 w-4 shrink-0 rounded-sm bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"
-        aria-hidden
-      />
+      {iconSrc ? (
+        <img
+          src={iconSrc}
+          alt=""
+          className="h-4 w-4 shrink-0 select-none object-contain"
+          draggable="false"
+        />
+      ) : (
+        <span
+          className="h-4 w-4 shrink-0 rounded-sm bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"
+          aria-hidden
+        />
+      )}
       <span className="truncate">{title}</span>
     </button>
   )
