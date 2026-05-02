@@ -180,22 +180,6 @@ export const APPS = [
     renderStack: () => createElement(BiodataWindowContent),
   },
   {
-    id: 'journey',
-    path: '/journey',
-    page: JourneyPage,
-    title: 'My_Journey.doc - Microsoft Word',
-    icon: wordIcon,
-    group: 'Office',
-    desktop: { label: 'My_Journey.doc', order: 12 },
-    stackable: true,
-    window: {
-      showMenuBar: false,
-      className: '',
-      shell: 'word',
-    },
-    renderStack: () => createElement(JourneyWindowContent),
-  },
-  {
     id: 'project',
     path: '/biodata',
     page: BiodataPage,
@@ -269,7 +253,7 @@ export const APPS = [
     title: 'Gallery',
     icon: myDocsIcon,
     group: 'Gallery',
-    desktop: { label: 'Gallery', order: 9 },
+    desktop: { label: 'Gallery', order: 8 },
     stackable: true,
     /** @type {string[]} Nested app ids (`APPS[].id`); open from inside the folder when implemented */
     children: [],
@@ -280,6 +264,22 @@ export const APPS = [
       explorerAddressPath: 'C:\\Documents and Settings\\Gallery',
     },
     renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
+  },
+  {
+    id: 'journey',
+    path: '/journey',
+    page: JourneyPage,
+    title: 'My_Journey.doc - Microsoft Word',
+    icon: wordIcon,
+    group: 'Office',
+    desktop: { label: 'My_Journey.doc', order: 9 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'word',
+    },
+    renderStack: () => createElement(JourneyWindowContent),
   },
 ]
 
