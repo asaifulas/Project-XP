@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import WindowFrame from '../components/window/WindowFrame'
-import BiodataWindowContent from '../components/windows/BiodataWindowContent'
 import { getAppFromLocation } from '../registry/apps'
+import { renderStackWindowBody } from '../components/window/windowRegistry'
 import {
   closeWindowAtPath,
   getOtherUrls,
@@ -32,7 +32,7 @@ export default function BiodataPage() {
         allowMaximize={win.allowMaximize ?? true}
         onClose={() => closeWindowAtPath(navigate, location, stackKey)}
       >
-        <BiodataWindowContent />
+        {renderStackWindowBody(stackKey, { keyboardActive: false })}
       </WindowFrame>
     </div>
   )

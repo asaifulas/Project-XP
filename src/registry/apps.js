@@ -1,39 +1,44 @@
 import { createElement } from 'react'
-import HomePage from '../pages/HomePage'
 import AboutPage from '../pages/AboutPage'
 import BiodataPage from '../pages/BiodataPage'
-import JourneyPage from '../pages/JourneyPage'
 import CalculatorPage from '../pages/CalculatorPage'
-import WinampPage from '../pages/WinampPage'
-import PdfPage from '../pages/PdfPage'
 import FolderPage from '../pages/FolderPage'
+import HomePage from '../pages/HomePage'
+import JourneyPage from '../pages/JourneyPage'
+import PdfPage from '../pages/PdfPage'
+import WinampPage from '../pages/WinampPage'
 
 import calculatorIcon from '../assets/icons/calculator.svg'
+import docIcon from '../assets/icons/doc.png'
+import ieIcon from '../assets/icons/ie.png'
+import myComputerIcon from '../assets/icons/my_computer.png'
+import myDocsIcon from '../assets/icons/my_doc.png'
+import pdfIcon from '../assets/icons/pdf.png'
+import pptIcon from '../assets/icons/ppt.png'
+import recycleIcon from '../assets/icons/recycle.png'
+import winampIcon from '../assets/icons/winamp.png'
+import xlsIcon from '../assets/icons/xls.png'
 import wordIcon from '../assets/icons/word.png'
 import excelIcon from '../assets/icons/excel.png'
 import ppIcon from '../assets/icons/pp.png'
-import myComputerIcon from '../assets/icons/my_computer.png'
-import myDocsIcon from '../assets/icons/my_doc.png'
-import winampIcon from '../assets/icons/winamp.png'
-import recycleIcon from '../assets/icons/recycle.png'
-import ieIcon from '../assets/icons/ie.png'
-import pdfIcon from '../assets/icons/pdf.png'
 
-import AboutWindowContent from '../components/windows/AboutWindowContent'
-import BiodataWindowContent from '../components/windows/BiodataWindowContent'
-import JourneyWindowContent from '../components/windows/JourneyWindowContent'
 import CalculatorApp from '../components/apps/calculator/CalculatorApp'
-import WinampApp from '../components/apps/winamp/WinampApp'
 import ExcelApp from '../components/apps/excel/ExcelApp'
-import PdfReaderApp from '../components/apps/pdf/PdfReaderApp'
 import FolderApp from '../components/apps/folder/FolderApp'
 import InternetExplorerApp from '../components/apps/ie/InternetExplorerApp'
+import PdfReaderApp from '../components/apps/pdf/PdfReaderApp'
+import WinampApp from '../components/apps/winamp/WinampApp'
+import AboutWindowContent from '../components/windows/AboutWindowContent'
+import BiodataWindowContent from '../components/windows/BiodataWindowContent'
+import BlankPowerPointContent from '../components/windows/BlankPowerPointContent'
+import BlankWordContent from '../components/windows/BlankWordContent'
+import JourneyWindowContent from '../components/windows/JourneyWindowContent'
 
 import resumePdfUrl from '../assets/mine/Latest Resume Saiful.pdf?url'
 
 /**
  * Window chrome presets (extend with excel, powerpoint, folder, etc.).
- * @typedef {'default' | 'word' | 'excel' | 'pdf' | 'folder' | 'ie'} WindowShell
+ * @typedef {'default' | 'word' | 'excel' | 'ppt' | 'pdf' | 'folder' | 'ie'} WindowShell
  */
 
 /**
@@ -45,10 +50,11 @@ import resumePdfUrl from '../assets/mine/Latest Resume Saiful.pdf?url'
  * - `window.shell`: host-specific layout inside the XP frame (Word = A4 page, toolbars).
  * - `window.explorerAddressPath` (optional): when `shell: 'folder'`, text shown in the address bar.
  * - `window.initialUrl` (optional): when `shell: 'ie'`, default URL for the fake browser.
- * - Restored (non-maximized) frame size: 800×600 from `src/constants/xpWindow.js` unless `window.className` sets a custom width (e.g. Calculator).
- * - `window.compactFrame` (optional): when true, no fixed 600px height — window hugs content (Calculator).
+ * - Restored (non-maximized) frame size: 1440×1080 from `src/constants/xpWindow.js` (`shell: 'folder'` → 1024×768) unless `window.className` / `compactFrame` specialize (e.g. Calculator, Winamp).
+ * - `window.compactFrame` (optional): when true, no fixed standard height — window hugs content (Calculator).
  * - `children` (optional): for `shell: 'folder'`, an array of `APPS[].id` to show as shortcuts inside the folder (not yet wired to UI).
  * - Disambiguate same `path` with `?app=<id>` (see `openForegroundPreserveStack(..., appId)`).
+ * - `APPS` order: `home` first, then rows with `desktop` ascending by `desktop.order` (ties: stable id order). Bare URLs with duplicate `path` resolve via `getAppFromLocation` to the row whose `id` equals the path segment (e.g. `/biodata` → `biodata`).
  */
 export const APPS = [
   {
@@ -58,29 +64,13 @@ export const APPS = [
     stackable: false,
   },
   {
-    id: 'about',
-    path: '/about',
-    page: AboutPage,
-    title: 'Document1 - Microsoft Word',
-    icon: wordIcon,
-    group: 'Office',
-    desktop: { label: 'About_Me.doc', order: 20 },
-    stackable: true,
-    window: {
-      showMenuBar: false,
-      className: '',
-      shell: 'word',
-    },
-    renderStack: () => createElement(AboutWindowContent),
-  },
-  {
     id: 'my_computer',
     path: '/about',
     page: AboutPage,
     title: 'My Computer',
     icon: myComputerIcon,
     group: 'Office',
-    desktop: { label: 'My Computer', order: 5 },
+    desktop: { label: 'My Computer', order: 1 },
     stackable: true,
     children: [],
     window: {
@@ -98,7 +88,7 @@ export const APPS = [
     title: 'My Documents',
     icon: myDocsIcon,
     group: 'Office',
-    desktop: { label: 'My Document', order: 7 },
+    desktop: { label: 'My Document', order: 2 },
     stackable: true,
     children: [],
     window: {
@@ -116,7 +106,7 @@ export const APPS = [
     title: 'Internet Explorer',
     icon: ieIcon,
     group: 'Office',
-    desktop: { label: 'Internet Explorer', order: 8 },
+    desktop: { label: 'Internet Explorer', order: 3 },
     stackable: true,
     window: {
       showMenuBar: false,
@@ -136,7 +126,7 @@ export const APPS = [
     title: 'Winamp',
     icon: winampIcon,
     group: 'Office',
-    desktop: { label: 'Winamp', order: 8 },
+    desktop: { label: 'Winamp', order: 4 },
     stackable: true,
     window: {
       showMenuBar: false,
@@ -148,27 +138,94 @@ export const APPS = [
     renderStack: () => createElement(WinampApp),
   },
   {
-    id: 'recycle',
-    path: '/about',
-    page: AboutPage,
-    title: 'Recycle Bin',
-    icon: recycleIcon,
+    id: 'gallery_folder',
+    path: '/gallery',
+    page: FolderPage,
+    title: 'Gallery',
+    icon: myDocsIcon,
+    group: 'Gallery',
+    desktop: { label: 'Gallery', order: 5 },
+    stackable: true,
+    /** @type {string[]} Nested app ids (`APPS[].id`); open from inside the folder when implemented */
+    children: [],
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'folder',
+      explorerAddressPath: 'C:\\Documents and Settings\\Gallery',
+    },
+    renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
+  },
+  {
+    id: 'office_word',
+    path: '/biodata',
+    page: BiodataPage,
+    title: 'Document1 - Microsoft Word',
+    icon: wordIcon,
     group: 'Office',
-    desktop: { label: 'Recycle Bin', order: 999 },
+    desktop: { label: 'Microsoft Word', order: 6 },
     stackable: true,
     window: {
-      showMenuBar: true,
+      showMenuBar: false,
       className: '',
-      shell: 'default',
+      shell: 'word',
     },
-    renderStack: () => createElement(AboutWindowContent),
+    renderStack: () => createElement(BlankWordContent),
+  },
+  {
+    id: 'office_excel',
+    path: '/biodata',
+    page: BiodataPage,
+    title: 'Book1 - Microsoft Excel',
+    icon: excelIcon,
+    group: 'Office',
+    desktop: { label: 'Microsoft Excel', order: 7 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'excel',
+    },
+    renderStack: () => createElement(ExcelApp),
+  },
+  {
+    id: 'office_ppt',
+    path: '/biodata',
+    page: BiodataPage,
+    title: 'Presentation1 - Microsoft PowerPoint',
+    icon: ppIcon,
+    group: 'Office',
+    desktop: { label: 'Microsoft PowerPoint', order: 8 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'ppt',
+    },
+    renderStack: () => createElement(BlankPowerPointContent),
+  },
+  {
+    id: 'journey',
+    path: '/journey',
+    page: JourneyPage,
+    title: 'My_Journey.doc - Microsoft Word',
+    icon: docIcon,
+    group: 'Office',
+    desktop: { label: 'My_Journey.doc', order: 9 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'word',
+    },
+    renderStack: () => createElement(JourneyWindowContent),
   },
   {
     id: 'biodata',
     path: '/biodata',
     page: BiodataPage,
     title: 'Document1 - Microsoft Word',
-    icon: wordIcon,
+    icon: docIcon,
     group: 'Office',
     desktop: { label: 'Biodata.doc', order: 10 },
     stackable: true,
@@ -184,7 +241,7 @@ export const APPS = [
     path: '/biodata',
     page: BiodataPage,
     title: 'Projects.xls - Microsoft Excel',
-    icon: excelIcon,
+    icon: xlsIcon,
     group: 'Office',
     desktop: { label: 'Projects.xls', order: 10 },
     stackable: true,
@@ -200,7 +257,7 @@ export const APPS = [
     path: '/biodata',
     page: BiodataPage,
     title: 'Side_Projects.ppt - Microsoft PowerPoint',
-    icon: ppIcon,
+    icon: pptIcon,
     group: 'Office',
     desktop: { label: 'Side_Projects.ppt', order: 10 },
     stackable: true,
@@ -210,6 +267,38 @@ export const APPS = [
       shell: 'default',
     },
     renderStack: () => createElement(BiodataWindowContent),
+  },
+  {
+    id: 'acrobat_resume',
+    path: '/pdf',
+    page: PdfPage,
+    title: 'Latest Resume Saiful.pdf - Adobe Reader',
+    icon: pdfIcon,
+    group: 'Office',
+    desktop: { label: 'Latest Resume Saiful.pdf', order: 14 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'pdf',
+    },
+    renderStack: () => createElement(PdfReaderApp, { src: resumePdfUrl }),
+  },
+  {
+    id: 'about',
+    path: '/about',
+    page: AboutPage,
+    title: 'Document1 - Microsoft Word',
+    icon: docIcon,
+    group: 'Office',
+    desktop: { label: 'About_Me.doc', order: 20 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'word',
+    },
+    renderStack: () => createElement(AboutWindowContent),
   },
   {
     id: 'calculator',
@@ -231,55 +320,20 @@ export const APPS = [
       createElement(CalculatorApp, { keyboardActive: Boolean(keyboardActive) }),
   },
   {
-    id: 'acrobat_resume',
-    path: '/pdf',
-    page: PdfPage,
-    title: 'Latest Resume Saiful.pdf - Adobe Reader',
-    icon: pdfIcon,
+    id: 'recycle',
+    path: '/about',
+    page: AboutPage,
+    title: 'Recycle Bin',
+    icon: recycleIcon,
     group: 'Office',
-    desktop: { label: 'Latest Resume Saiful.pdf', order: 14 },
+    desktop: { label: 'Recycle Bin', order: 999 },
     stackable: true,
     window: {
-      showMenuBar: false,
+      showMenuBar: true,
       className: '',
-      shell: 'pdf',
+      shell: 'default',
     },
-    renderStack: () => createElement(PdfReaderApp, { src: resumePdfUrl }),
-  },
-  {
-    id: 'gallery_folder',
-    path: '/gallery',
-    page: FolderPage,
-    title: 'Gallery',
-    icon: myDocsIcon,
-    group: 'Gallery',
-    desktop: { label: 'Gallery', order: 8 },
-    stackable: true,
-    /** @type {string[]} Nested app ids (`APPS[].id`); open from inside the folder when implemented */
-    children: [],
-    window: {
-      showMenuBar: false,
-      className: '',
-      shell: 'folder',
-      explorerAddressPath: 'C:\\Documents and Settings\\Gallery',
-    },
-    renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
-  },
-  {
-    id: 'journey',
-    path: '/journey',
-    page: JourneyPage,
-    title: 'My_Journey.doc - Microsoft Word',
-    icon: wordIcon,
-    group: 'Office',
-    desktop: { label: 'My_Journey.doc', order: 9 },
-    stackable: true,
-    window: {
-      showMenuBar: false,
-      className: '',
-      shell: 'word',
-    },
-    renderStack: () => createElement(JourneyWindowContent),
+    renderStack: () => createElement(AboutWindowContent),
   },
 ]
 
@@ -289,8 +343,16 @@ export const ROUTES = APPS.map((app) => ({
   element: app.page,
 }))
 
+function appForBarePath(pathname) {
+  const samePath = APPS.filter((app) => app.path === pathname)
+  if (samePath.length === 0) return null
+  if (samePath.length === 1) return samePath[0]
+  const segment = pathname.replace(/^\//, '').replace(/-/g, '_') || ''
+  return samePath.find((a) => a.id === segment) ?? samePath[0]
+}
+
 export function getAppByPath(pathname) {
-  return APPS.find((app) => app.path === pathname) ?? null
+  return appForBarePath(pathname)
 }
 
 export function getAppById(id) {
@@ -310,7 +372,7 @@ export function getAppFromLocation(pathname, search = '') {
     const hit = APPS.find((a) => a.id === id && a.path === pathname)
     if (hit) return hit
   }
-  return APPS.find((app) => app.path === pathname) ?? null
+  return appForBarePath(pathname)
 }
 
 export function getDesktopApps() {
@@ -318,4 +380,3 @@ export function getDesktopApps() {
     .slice()
     .sort((a, b) => (a.desktop?.order ?? 0) - (b.desktop?.order ?? 0))
 }
-

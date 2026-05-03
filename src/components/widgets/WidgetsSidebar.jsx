@@ -6,7 +6,7 @@ import StickyNotesWidget from './StickyNotesWidget'
 export default function WidgetsSidebar() {
   return (
     <aside
-      className="xp-glass-sidebar pointer-events-auto absolute bottom-[42px] right-3 top-3 z-30 flex w-[260px] min-h-0 flex-col gap-3 overflow-hidden"
+      className="xp-glass-sidebar pointer-events-auto z-30 flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden"
       aria-label="Desktop widgets"
     >
       <div className="xp-glass-panel xp-glass-sticky-undocked flex h-[min(380px,58vh)] min-h-[220px] shrink-0 flex-col overflow-hidden p-3">

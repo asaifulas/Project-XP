@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import Taskbar from '../taskbar/Taskbar'
 import { useShellStore } from '../../stores/useShellStore'
 import WindowFrame from '../window/WindowFrame'
+import DesktopClippy from '../desktop/DesktopClippy'
 import DesktopIcon from '../desktop/DesktopIcon'
 import WidgetsSidebar from '../widgets/WidgetsSidebar'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
@@ -73,6 +74,10 @@ export default function AppLayout({ children }) {
     setContextMenu((menu) => ({ ...menu, open: false }))
   }
 
+  const desktopApps = getDesktopApps()
+  const mainDesktopApps = desktopApps.filter((app) => app.id !== 'recycle')
+  const recycleApp = desktopApps.find((app) => app.id === 'recycle')
+
   return (
     <div className="flex h-svh flex-col overflow-hidden bg-xp-desktop font-xp text-xp-panel antialiased">
       <div
@@ -88,20 +93,42 @@ export default function AppLayout({ children }) {
         <div className="relative z-10 h-full">
           <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20">
             <div className="pointer-events-auto flex h-full max-h-full max-w-[calc(100%-17.5rem)] flex-col flex-wrap content-start gap-x-3 gap-y-2">
-              {getDesktopApps().map((app) => (
-                <DesktopIcon
-                  key={app.id}
-                  label={app.desktop.label}
-                  iconSrc={app.icon}
-                  className="shrink-0"
-                  onOpen={() =>
-                    openForegroundPreserveStack(navigate, location, app.path, app.id)
-                  }
-                />
-              ))}
+              {mainDesktopApps.map((app) => (
+                  <DesktopIcon
+                    key={app.id}
+                    label={app.desktop.label}
+                    iconSrc={app.icon}
+                    className="shrink-0"
+                    onOpen={() =>
+                      openForegroundPreserveStack(navigate, location, app.path, app.id)
+                    }
+                  />
+                ))}
             </div>
           </div>
-          <WidgetsSidebar />
+          <div className="pointer-events-none absolute bottom-[42px] right-3 top-3 z-30 flex w-[260px] flex-col gap-2">
+            <div className="pointer-events-auto min-h-0 flex-1 overflow-hidden">
+              <WidgetsSidebar />
+            </div>
+            {recycleApp ? (
+              <div className="pointer-events-auto flex shrink-0 justify-center pt-0.5">
+                <DesktopIcon
+                  label={recycleApp.desktop.label}
+                  iconSrc={recycleApp.icon}
+                  className="shrink-0"
+                  onOpen={() =>
+                    openForegroundPreserveStack(
+                      navigate,
+                      location,
+                      recycleApp.path,
+                      recycleApp.id,
+                    )
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
+          <DesktopClippy />
           {children}
         </div>
 

@@ -7,8 +7,11 @@ import WindowControls from './WindowControls'
 import WindowMenuBar from './WindowMenuBar'
 import WordOfficeChrome from './WordOfficeChrome'
 import ExcelOfficeChrome from './ExcelOfficeChrome'
+import PowerPointOfficeChrome from './PowerPointOfficeChrome'
 import FolderExplorerChrome from '../apps/folder/FolderExplorerChrome'
 import {
+  XP_FOLDER_FRAME_CLASS,
+  XP_FOLDER_FRAME_HEIGHT_ONLY_CLASS,
   XP_STANDARD_FRAME_CLASS,
   XP_STANDARD_FRAME_HEIGHT_ONLY_CLASS,
 } from '../../constants/xpWindow'
@@ -16,18 +19,19 @@ import {
 /**
  * @param {'xp' | 'none'} [chrome]
  *   `none`: no XP title bar or menu; embed custom chrome and use `useFramelessWindow()`.
- * @param {'default' | 'word' | 'excel' | 'pdf' | 'folder' | 'ie'} [shell]
+ * @param {'default' | 'word' | 'excel' | 'ppt' | 'pdf' | 'folder' | 'ie'} [shell]
  *   `word`: Word 2003–style workspace with centered A4 page (see registry `window.shell`).
  *   `excel`: Excel 2003–style grid workspace (toolbars, formula bar, sheets).
+ *   `ppt`: PowerPoint 2003–style slide workspace (outline + stage).
  *   `pdf`: Adobe Reader–style viewer (see `PdfReaderApp`).
- *   `folder`: Explorer-style host (tasks pane + main area for nested app shortcuts). Restored size uses the global standard frame (800×600); maximize fills the desktop as usual.
+ *   `folder`: Explorer-style host (tasks pane + main area for nested app shortcuts). Restored size uses 1024×768; maximize fills the desktop as usual.
  *   `ie`: Internet Explorer 7–style chrome with embedded browsing area (see `InternetExplorerApp`).
  * @param {boolean} [allowMaximize]
  *   When false, maximize/restore is disabled (e.g. Calculator, Winamp). Full-screen maximize only applies to XP chrome.
  * @param {string} [explorerAddressPath]
  *   Address bar path when `shell === 'folder'` (defaults from `title` if omitted).
  * @param {boolean} [compactRestoredFrame]
- *   When true, restored window uses intrinsic height (no 600px shell); for small fixed-width apps like Calculator.
+ *   When true, restored window uses intrinsic height (no fixed standard height); for small fixed-width apps like Calculator.
  */
 export default function WindowFrame({
   programId,
@@ -188,15 +192,19 @@ export default function WindowFrame({
   const hasExplicitWidthClass =
     /\bw-/.test(className) || /\bmax-w-/.test(className) || /\bmin-w-/.test(className)
 
-  /** Restored XP windows share an 800×600 outer frame unless `className` sets width (e.g. Calculator). */
+  /** Restored XP frame: 1440×1080 by default; `shell: 'folder'` uses 1024×768 unless `className` / `compactRestoredFrame` specialize (e.g. Calculator, Winamp). */
   const useStandardRestoredFrame =
     chrome === 'xp' && !isFrameless && !(isMaximized && allowMaximize)
   const standardRestoredFrameClasses = useStandardRestoredFrame
     ? compactRestoredFrame
       ? 'flex flex-col'
       : hasExplicitWidthClass
-        ? XP_STANDARD_FRAME_HEIGHT_ONLY_CLASS
-        : XP_STANDARD_FRAME_CLASS
+        ? shell === 'folder'
+          ? XP_FOLDER_FRAME_HEIGHT_ONLY_CLASS
+          : XP_STANDARD_FRAME_HEIGHT_ONLY_CLASS
+        : shell === 'folder'
+          ? XP_FOLDER_FRAME_CLASS
+          : XP_STANDARD_FRAME_CLASS
     : ''
 
   return (
@@ -280,7 +288,12 @@ export default function WindowFrame({
             className={
               isFrameless
                 ? 'max-h-[85svh] overflow-visible p-0'
-                : shell === 'word' || shell === 'excel' || shell === 'pdf' || shell === 'folder' || shell === 'ie'
+                : shell === 'word' ||
+                    shell === 'excel' ||
+                    shell === 'ppt' ||
+                    shell === 'pdf' ||
+                    shell === 'folder' ||
+                    shell === 'ie'
                   ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-0'
                   : compactRestoredFrame
                     ? 'xp-client shrink-0 overflow-visible p-4'
@@ -289,6 +302,9 @@ export default function WindowFrame({
           >
             {!isFrameless && shell === 'word' ? <WordOfficeChrome>{children}</WordOfficeChrome> : null}
             {!isFrameless && shell === 'excel' ? <ExcelOfficeChrome /> : null}
+            {!isFrameless && shell === 'ppt' ? (
+              <PowerPointOfficeChrome>{children}</PowerPointOfficeChrome>
+            ) : null}
             {!isFrameless && shell === 'pdf' ? children : null}
             {!isFrameless && shell === 'ie' ? children : null}
             {!isFrameless && shell === 'folder' ? (
@@ -298,7 +314,12 @@ export default function WindowFrame({
                 {children}
               </FolderExplorerChrome>
             ) : null}
-            {shell !== 'word' && shell !== 'excel' && shell !== 'pdf' && shell !== 'folder' && shell !== 'ie'
+            {shell !== 'word' &&
+            shell !== 'excel' &&
+            shell !== 'ppt' &&
+            shell !== 'pdf' &&
+            shell !== 'folder' &&
+            shell !== 'ie'
               ? children
               : null}
           </div>
