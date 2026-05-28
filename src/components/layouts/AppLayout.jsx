@@ -8,6 +8,11 @@ import DesktopIcon from '../desktop/DesktopIcon'
 import WidgetsSidebar from '../widgets/WidgetsSidebar'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 import { getDesktopApps } from '../../registry/apps'
+import { openExternalUrl } from '../../utils/openExternalUrl'
+import {
+  XP_DESKTOP_ICON_CELL_HEIGHT_PX,
+  XP_DESKTOP_ICON_CELL_WIDTH_PX,
+} from '../../constants/xpDesktop'
 
 /**
  * Desktop shell: workspace + Windows XP–style taskbar.
@@ -91,23 +96,35 @@ export default function AppLayout({ children }) {
           />
         ) : null}
         <div className="relative z-10 h-full">
-          <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20">
-            <div className="pointer-events-auto flex h-full max-h-full max-w-[calc(100%-17.5rem)] flex-col flex-wrap content-start gap-x-3 gap-y-2">
+          {/* Explicit width: reserve `right-3` + `w-[260px]` for widgets/recycle.
+              Column-major grid: fixed row height so icons in the same row line up across columns. */}
+          <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20 min-h-0 w-[max(0px,calc(100%-17.75rem))]">
+            <div
+              className="pointer-events-auto grid h-full min-h-0 max-h-full min-w-0 grid-flow-col content-start gap-x-3 overflow-auto no-scrollbar"
+              style={{
+                gridTemplateRows: `repeat(auto-fill, ${XP_DESKTOP_ICON_CELL_HEIGHT_PX}px)`,
+                gridAutoColumns: `${XP_DESKTOP_ICON_CELL_WIDTH_PX}px`,
+              }}
+            >
               {mainDesktopApps.map((app) => (
                   <DesktopIcon
                     key={app.id}
                     label={app.desktop.label}
                     iconSrc={app.icon}
                     className="shrink-0"
-                    onOpen={() =>
+                    onOpen={() => {
+                      if (app.externalUrl) {
+                        openExternalUrl(app.externalUrl)
+                        return
+                      }
                       openForegroundPreserveStack(navigate, location, app.path, app.id)
-                    }
+                    }}
                   />
                 ))}
             </div>
           </div>
           <div className="pointer-events-none absolute bottom-[42px] right-3 top-3 z-30 flex w-[260px] flex-col gap-2">
-            <div className="pointer-events-auto min-h-0 flex-1 overflow-hidden">
+            <div className="pointer-events-auto min-h-0 flex-1 overflow-y-auto no-scrollbar">
               <WidgetsSidebar />
             </div>
             {recycleApp ? (
@@ -247,7 +264,9 @@ export default function AppLayout({ children }) {
                 title="Display Properties"
                 onClose={() => setWallpaperSettingsOpen(false)}
                 showMenuBar={false}
-                className="pointer-events-auto"
+                allowMaximize={false}
+                compactRestoredFrame
+                className="pointer-events-auto w-[min(560px,calc(100%-24px))]"
               >
                 <div className="mb-3 flex gap-2 border-b border-[#b7b4a8] text-[11px]">
                   <span className="border border-[#b7b4a8] border-b-[#f8fafc] bg-[#f8fafc] px-3 py-1 font-semibold">

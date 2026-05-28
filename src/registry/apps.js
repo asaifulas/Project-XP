@@ -16,6 +16,10 @@ import myDocsIcon from '../assets/icons/my_doc.png'
 import pdfIcon from '../assets/icons/pdf.png'
 import pptIcon from '../assets/icons/ppt.png'
 import recycleIcon from '../assets/icons/recycle.png'
+import whatsappIcon from '../assets/icons/whatsapp.svg'
+import linkedinIcon from '../assets/icons/linkedin.svg'
+import gmailIcon from '../assets/icons/gmail.svg'
+import githubIcon from '../assets/icons/github.svg'
 import winampIcon from '../assets/icons/winamp.png'
 import xlsIcon from '../assets/icons/xls.png'
 import wordIcon from '../assets/icons/word.png'
@@ -36,6 +40,14 @@ import JourneyWindowContent from '../components/windows/JourneyWindowContent'
 
 import resumePdfUrl from '../assets/mine/Latest Resume Saiful.pdf?url'
 
+export const EXTERNAL_URLS = {
+  whatsapp:
+    'https://api.whatsapp.com/send/?phone=%2B60133321415&text=Hi,%20I%20come%20from%20your%20portfolio&type=phone_number&app_absent=0',
+  linkedin: 'https://www.linkedin.com/in/ahmad-saifullah-arifin-93332212a/',
+  gmail: 'mailto:asaifulas@gmail.com',
+  github: 'https://github.com/asaifulas',
+}
+
 /**
  * Window chrome presets (extend with excel, powerpoint, folder, etc.).
  * @typedef {'default' | 'word' | 'excel' | 'ppt' | 'pdf' | 'folder' | 'ie'} WindowShell
@@ -53,6 +65,7 @@ import resumePdfUrl from '../assets/mine/Latest Resume Saiful.pdf?url'
  * - Restored (non-maximized) frame size: 1440×1080 from `src/constants/xpWindow.js` (`shell: 'folder'` → 1024×768) unless `window.className` / `compactFrame` specialize (e.g. Calculator, Winamp).
  * - `window.compactFrame` (optional): when true, no fixed standard height — window hugs content (Calculator).
  * - `children` (optional): for `shell: 'folder'`, an array of `APPS[].id` to show as shortcuts inside the folder (not yet wired to UI).
+ * - `externalUrl` (optional): desktop shortcut opens in a new tab (`noopener,noreferrer`); no route/window.
  * - Disambiguate same `path` with `?app=<id>` (see `openForegroundPreserveStack(..., appId)`).
  * - `APPS` order: `home` first, then rows with `desktop` ascending by `desktop.order` (ties: stable id order). Bare URLs with duplicate `path` resolve via `getAppFromLocation` to the row whose `id` equals the path segment (e.g. `/biodata` → `biodata`).
  */
@@ -285,6 +298,38 @@ export const APPS = [
     renderStack: () => createElement(PdfReaderApp, { src: resumePdfUrl }),
   },
   {
+    id: 'whatsapp',
+    desktop: { label: 'WhatsApp', order: 15 },
+    icon: whatsappIcon,
+    group: 'Connect',
+    externalUrl: EXTERNAL_URLS.whatsapp,
+    stackable: false,
+  },
+  {
+    id: 'linkedin',
+    desktop: { label: 'LinkedIn', order: 16 },
+    icon: linkedinIcon,
+    group: 'Connect',
+    externalUrl: EXTERNAL_URLS.linkedin,
+    stackable: false,
+  },
+  {
+    id: 'gmail',
+    desktop: { label: 'Gmail', order: 17 },
+    icon: gmailIcon,
+    group: 'Connect',
+    externalUrl: EXTERNAL_URLS.gmail,
+    stackable: false,
+  },
+  {
+    id: 'github',
+    desktop: { label: 'GitHub', order: 18 },
+    icon: githubIcon,
+    group: 'Connect',
+    externalUrl: EXTERNAL_URLS.github,
+    stackable: false,
+  },
+  {
     id: 'about',
     path: '/about',
     page: AboutPage,
@@ -337,7 +382,7 @@ export const APPS = [
   },
 ]
 
-export const ROUTES = APPS.map((app) => ({
+export const ROUTES = APPS.filter((app) => app.page && app.path).map((app) => ({
   id: app.id,
   path: app.path,
   element: app.page,

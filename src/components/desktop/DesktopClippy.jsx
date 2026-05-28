@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getDesktopApps } from '../../registry/apps'
+import { openExternalUrl } from '../../utils/openExternalUrl'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 
 const clippySrcList = Object.values(
@@ -173,13 +174,18 @@ export default function DesktopClippy() {
     const desktop = getDesktopApps().map((app) => ({
       key: app.id,
       label: app.desktop.label,
-      path: app.path,
+      path: app.path ?? '/',
       appId: app.id,
+      externalUrl: app.externalUrl ?? null,
     }))
     return [{ key: 'home', label: 'Desktop', path: '/', appId: null }, ...desktop]
   }, [])
 
   const handleNav = (item) => {
+    if (item.externalUrl) {
+      openExternalUrl(item.externalUrl)
+      return
+    }
     if (item.path === '/' && item.appId == null) {
       navigate({ pathname: '/', search: '' })
       return
