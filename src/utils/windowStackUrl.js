@@ -1,7 +1,19 @@
 /** @typedef {{ pathname: string, search: string }} LocationLike */
 
 /** Routes that may appear in the window stack (not the bare desktop). */
-const STACK = new Set(['/about', '/biodata', '/journey', '/calculator', '/winamp', '/pdf', '/folder'])
+const STACK = new Set([
+  '/about',
+  '/welcome',
+  '/biodata',
+  '/journey',
+  '/profile',
+  '/experience',
+  '/calculator',
+  '/winamp',
+  '/pdf',
+  '/folder',
+  '/gallery',
+])
 
 export function isStackablePath(pathname) {
   return STACK.has(pathname)

@@ -1,10 +1,13 @@
 import { createElement } from 'react'
 import AboutPage from '../pages/AboutPage'
+import WelcomePage from '../pages/WelcomePage'
+import ExperiencePage from '../pages/ExperiencePage'
 import BiodataPage from '../pages/BiodataPage'
 import CalculatorPage from '../pages/CalculatorPage'
 import FolderPage from '../pages/FolderPage'
 import HomePage from '../pages/HomePage'
 import JourneyPage from '../pages/JourneyPage'
+import ProfilePage from '../pages/ProfilePage'
 import PdfPage from '../pages/PdfPage'
 import WinampPage from '../pages/WinampPage'
 
@@ -36,7 +39,10 @@ import AboutWindowContent from '../components/windows/AboutWindowContent'
 import BiodataWindowContent from '../components/windows/BiodataWindowContent'
 import BlankPowerPointContent from '../components/windows/BlankPowerPointContent'
 import BlankWordContent from '../components/windows/BlankWordContent'
+import WelcomeWindowContent from '../components/windows/WelcomeWindowContent'
 import JourneyWindowContent from '../components/windows/JourneyWindowContent'
+import ProfileWindowContent from '../components/windows/ProfileWindowContent'
+import ExperiencePowerPointContent from '../components/windows/ExperiencePowerPointContent'
 
 import resumePdfUrl from '../assets/mine/Latest Resume Saiful.pdf?url'
 
@@ -50,7 +56,7 @@ export const EXTERNAL_URLS = {
 
 /**
  * Window chrome presets (extend with excel, powerpoint, folder, etc.).
- * @typedef {'default' | 'word' | 'excel' | 'ppt' | 'pdf' | 'folder' | 'ie'} WindowShell
+ * @typedef {'default' | 'word' | 'excel' | 'ppt' | 'ppt-full' | 'pdf' | 'folder' | 'ie'} WindowShell
  */
 
 /**
@@ -75,6 +81,22 @@ export const APPS = [
     path: '/',
     page: HomePage,
     stackable: false,
+  },
+  {
+    id: 'welcome',
+    path: '/welcome',
+    page: WelcomePage,
+    title: 'Welcome.doc - Microsoft Word',
+    icon: docIcon,
+    group: 'Office',
+    desktop: { label: 'Welcome.doc', order: 0 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'word',
+    },
+    renderStack: () => createElement(WelcomeWindowContent),
   },
   {
     id: 'my_computer',
@@ -232,6 +254,38 @@ export const APPS = [
       shell: 'word',
     },
     renderStack: () => createElement(JourneyWindowContent),
+  },
+  {
+    id: 'profile',
+    path: '/profile',
+    page: ProfilePage,
+    title: 'Profile.doc - Microsoft Word',
+    icon: docIcon,
+    group: 'Office',
+    desktop: { label: 'Profile.doc', order: 9 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'word',
+    },
+    renderStack: () => createElement(ProfileWindowContent),
+  },
+  {
+    id: 'experience',
+    path: '/experience',
+    page: ExperiencePage,
+    title: 'Experience.ppt - Microsoft PowerPoint',
+    icon: pptIcon,
+    group: 'Office',
+    desktop: { label: 'Experience.ppt', order: 9 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'ppt-full',
+    },
+    renderStack: () => createElement(ExperiencePowerPointContent),
   },
   {
     id: 'biodata',

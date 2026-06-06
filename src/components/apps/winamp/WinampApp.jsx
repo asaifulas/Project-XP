@@ -49,9 +49,23 @@ function useSpectrumBars(isPlaying) {
   return bars
 }
 
+const AUDIO_ACCEPT =
+  'audio/*,.mp3,.wav,.ogg,.oga,.m4a,.aac,.flac,.webm,.opus,.aiff,.aif,.wma'
+
+function isAudioFile(file) {
+  if (file.type.startsWith('audio/')) return true
+  return /\.(mp3|wav|ogg|oga|m4a|aac|flac|webm|opus|aiff|aif|wma)$/i.test(file.name)
+}
+
+function stripExtension(name) {
+  return name.replace(/\.[^.]+$/i, '')
+}
+
 export default function WinampApp() {
   const frame = useFramelessWindow()
-  const tracks = useMemo(() => loadSongTracks(), [])
+  const bundledTracks = useMemo(() => loadSongTracks(), [])
+  const [userTracks, setUserTracks] = useState(/** @type {{ id: string, title: string, url: string }[]} */ ([]))
+  const tracks = useMemo(() => [...bundledTracks, ...userTracks], [bundledTracks, userTracks])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)
@@ -64,6 +78,8 @@ export default function WinampApp() {
   const [eqOn, setEqOn] = useState(true)
 
   const audioRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const blobUrlsRef = useRef(/** @type {Set<string>} */ (new Set()))
   const seekRef = useRef(false)
   const repeatRef = useRef(repeat)
   const spectrum = useSpectrumBars(isPlaying)
@@ -72,8 +88,47 @@ export default function WinampApp() {
   const hasTracks = tracks.length > 0
 
   useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      blobUrlsRef.current.clear()
+    }
+  }, [])
+
+  useEffect(() => {
     repeatRef.current = repeat
   }, [repeat])
+
+  const handleFileUpload = (event) => {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    const audioFiles = files.filter(isAudioFile)
+    if (audioFiles.length === 0) return
+
+    const stamp = Date.now()
+    const added = audioFiles.map((file, index) => {
+      const url = URL.createObjectURL(file)
+      blobUrlsRef.current.add(url)
+      return {
+        id: `upload-${stamp}-${index}-${file.name}`,
+        title: stripExtension(file.name),
+        url,
+      }
+    })
+
+    const firstNewIndex = bundledTracks.length + userTracks.length
+    const shouldStartPlayback = !isPlaying
+
+    setUserTracks((prev) => [...prev, ...added])
+
+    if (shouldStartPlayback) {
+      setCurrentIndex(firstNewIndex)
+      setIsPlaying(true)
+    }
+  }
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click()
+  }
 
   useEffect(() => {
     const el = audioRef.current
@@ -193,12 +248,20 @@ export default function WinampApp() {
 
   const playlistLine = current
     ? `${currentIndex + 1}. ${current.title}`
-    : 'No tracks in src/assets/songs'
-
+    : 'No tracks — use ⏏ to add audio'
 
   return (
     <div className="winamp-root">
       <audio ref={audioRef} preload="metadata" />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={AUDIO_ACCEPT}
+        multiple
+        className="winamp-file-input"
+        aria-label="Add audio files to playlist"
+        onChange={handleFileUpload}
+      />
 
       <div className="winamp-skin">
         {/* Main player */}
@@ -363,7 +426,13 @@ export default function WinampApp() {
               >
                 ⏭
               </button>
-              <button type="button" className="winamp-tpb" aria-label="Eject" disabled>
+              <button
+                type="button"
+                className="winamp-tpb"
+                aria-label="Open audio file"
+                title="Add audio files"
+                onClick={openFilePicker}
+              >
                 ⏏
               </button>
               <button
@@ -464,7 +533,7 @@ export default function WinampApp() {
             <div className="winamp-pl-list" role="listbox" aria-label="Playlist">
               {tracks.length === 0 ? (
                 <div className="winamp-pl-item" style={{ cursor: 'default', color: '#668866' }}>
-                  Add .mp3 files to src/assets/songs
+                  Click ⏏ on the player or add files to src/assets/songs
                 </div>
               ) : (
                 tracks.map((t, i) => (

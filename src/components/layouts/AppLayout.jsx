@@ -5,14 +5,12 @@ import { useShellStore } from '../../stores/useShellStore'
 import WindowFrame from '../window/WindowFrame'
 import DesktopClippy from '../desktop/DesktopClippy'
 import DesktopIcon from '../desktop/DesktopIcon'
+import DesktopIconsArea from '../desktop/DesktopIconsArea'
 import WidgetsSidebar from '../widgets/WidgetsSidebar'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 import { getDesktopApps } from '../../registry/apps'
 import { openExternalUrl } from '../../utils/openExternalUrl'
-import {
-  XP_DESKTOP_ICON_CELL_HEIGHT_PX,
-  XP_DESKTOP_ICON_CELL_WIDTH_PX,
-} from '../../constants/xpDesktop'
+import { useDesktopIconStore } from '../../stores/useDesktopIconStore'
 
 /**
  * Desktop shell: workspace + Windows XP–style taskbar.
@@ -66,8 +64,11 @@ export default function AppLayout({ children }) {
     })
   }
 
+  const resetIconPositions = useDesktopIconStore((s) => s.resetIconPositions)
+
   const handleRefreshDesktop = () => {
-    window.location.reload()
+    resetIconPositions()
+    closeContextMenu()
   }
 
   const handleOpenWallpaperSettings = () => {
@@ -96,32 +97,18 @@ export default function AppLayout({ children }) {
           />
         ) : null}
         <div className="relative z-10 h-full">
-          {/* Explicit width: reserve `right-3` + `w-[260px]` for widgets/recycle.
-              Column-major grid: fixed row height so icons in the same row line up across columns. */}
+          {/* Explicit width: reserve `right-3` + `w-[260px]` for widgets/recycle. */}
           <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20 min-h-0 w-[max(0px,calc(100%-17.75rem))]">
-            <div
-              className="pointer-events-auto grid h-full min-h-0 max-h-full min-w-0 grid-flow-col content-start gap-x-3 overflow-auto no-scrollbar"
-              style={{
-                gridTemplateRows: `repeat(auto-fill, ${XP_DESKTOP_ICON_CELL_HEIGHT_PX}px)`,
-                gridAutoColumns: `${XP_DESKTOP_ICON_CELL_WIDTH_PX}px`,
+            <DesktopIconsArea
+              apps={mainDesktopApps}
+              onOpenApp={(app) => {
+                if (app.externalUrl) {
+                  openExternalUrl(app.externalUrl)
+                  return
+                }
+                openForegroundPreserveStack(navigate, location, app.path, app.id)
               }}
-            >
-              {mainDesktopApps.map((app) => (
-                  <DesktopIcon
-                    key={app.id}
-                    label={app.desktop.label}
-                    iconSrc={app.icon}
-                    className="shrink-0"
-                    onOpen={() => {
-                      if (app.externalUrl) {
-                        openExternalUrl(app.externalUrl)
-                        return
-                      }
-                      openForegroundPreserveStack(navigate, location, app.path, app.id)
-                    }}
-                  />
-                ))}
-            </div>
+            />
           </div>
           <div className="pointer-events-none absolute bottom-[42px] right-3 top-3 z-30 flex w-[260px] flex-col gap-2">
             <div className="pointer-events-auto min-h-0 flex-1 overflow-y-auto no-scrollbar">

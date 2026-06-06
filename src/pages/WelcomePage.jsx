@@ -1,0 +1,46 @@
+import { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import WindowFrame from '../components/window/WindowFrame'
+import { renderStackWindowBody } from '../components/window/windowRegistry'
+import { getAppFromLocation } from '../registry/apps'
+import {
+  closeWindowAtPath,
+  getOtherUrls,
+  stackKeyFromLocation,
+} from '../utils/windowStackUrl'
+
+const WELCOME_SESSION_KEY = 'porto-welcome-opened'
+
+export default function WelcomePage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const others = getOtherUrls(location.search)
+  const app = getAppFromLocation(location.pathname, location.search)
+  const stackKey = stackKeyFromLocation(location)
+  const win = app?.window ?? {}
+  const shell = win.shell ?? 'default'
+
+  useEffect(() => {
+    sessionStorage.setItem(WELCOME_SESSION_KEY, '1')
+  }, [])
+
+  return (
+    <div className="flex h-full items-start justify-center p-3 pt-10 text-left">
+      <WindowFrame
+        programId={app ? `win-${app.id}` : 'win-welcome'}
+        title={app?.title ?? 'Welcome.doc'}
+        iconSrc={app?.icon ?? null}
+        isActive
+        stackIndex={others.length}
+        showMenuBar={Boolean(win.showMenuBar ?? true)}
+        className={win.className ?? ''}
+        chrome={win.chrome ?? 'xp'}
+        shell={shell}
+        allowMaximize={win.allowMaximize ?? true}
+        onClose={() => closeWindowAtPath(navigate, location, stackKey)}
+      >
+        {renderStackWindowBody(stackKey, { keyboardActive: false })}
+      </WindowFrame>
+    </div>
+  )
+}

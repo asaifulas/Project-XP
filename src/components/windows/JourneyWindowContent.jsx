@@ -8,45 +8,45 @@ const milestones = [
     label: 'Where it began',
     hint: 'Primary school',
     body:
-      'I did not land in software because of a job title first — I landed there because old machines, slow boot screens, and “what does this button do?” were irresistible. My curiosity about computers started in primary school. From Windows 98 and ME through XP and beyond, I kept asking how the pieces fit together, not only how to use them.',
+      'My journey into technology did not begin with a title — it began with curiosity. In primary school, I was fascinated by old computers, slow boot screens, and the simple question of how things actually worked beneath the surface. From Windows 98 and ME to XP and beyond, I kept exploring not just how to use technology, but how to understand it.',
   },
   {
     label: 'The web clicked',
     hint: 'Secondary school',
     body:
-      'In secondary school I helped run the school site on Joomla. Outside that, I taught myself minisites, WordPress installs, and day-to-day maintenance — broken plugins, backups, themes, and the small dramas that teach you how sites really behave in the wild. That work turned fascination into habit: I wanted to understand how sites are built, not only how to keep them online.',
+      'In secondary school, that curiosity found its first real direction. I helped manage the school website on Joomla, and outside of that I taught myself how to build and maintain minisites, WordPress installations, and everyday web systems. Broken plugins, backup issues, theme adjustments, and small fixes became valuable lessons — and little by little, the web stopped being mysterious and started feeling like a craft I wanted to master.',
   },
   {
-    label: 'Hands on circuits',
+    label: 'Hands on learning',
     hint: 'Hobby years',
     body:
-      'In parallel I played with Arduino — azan clocks, line followers, and other small builds where the feedback loop is physical. Those projects trained patience, debugging when nothing smokes but nothing works, and thinking in states and conditions long before I called any of that “engineering.”',
+      'Alongside web development, I spent time experimenting with Arduino and small hardware projects. From azan clocks to line followers and other simple builds, I learned the discipline of testing, debugging, and patiently solving problems when the result was not immediately visible. Those projects shaped the way I think: practical, structured, and always driven by curiosity.',
   },
   {
-    label: 'Systems without the major',
+    label: 'Systems thinking',
     hint: 'Aerospace studies',
     body:
-      'Even without a programming degree, I was comfortable with structured thinking and how systems behave. That showed up when I built aircraft preliminary calculation software in C#, following Dr. Jan Roskam’s methods — less about syntax flex, more about turning theory into something a user could trust.',
+      'My aerospace background gave me a strong foundation in structured thinking and engineering discipline. During my studies, I built aircraft preliminary calculation software in C# using Dr. Jan Roskam’s methods, turning theory into something usable and trustworthy. It was an early reminder that good software is not just about code — it is about clarity, reliability, and solving real problems well.',
   },
   {
-    label: 'A deliberate turn',
+    label: 'A deliberate shift',
     hint: 'After Covid',
     body:
-      'When Covid rerouted plans, I chose software engineering as the next chapter. I joined Avialite as an IT Engineer; the entry test was a simple HTML page, and from there the work widened — PHP and Laravel web apps, microcontrollers for IoT, firewall-related tasks, and whatever technical fire needed putting out. It was a turning point: from solving what breaks today to building what should work tomorrow.',
+      'When Covid changed the direction of my plans, I made a conscious decision to move deeper into software engineering. At Avialite, I joined as an IT Engineer and quickly found myself working across PHP, Laravel, IoT devices, Android apps, Python automation, and ERP deployment. That role broadened my perspective — from fixing what was broken to designing systems that could support real operations and scale with confidence.',
   },
   {
-    label: 'Levelling up',
+    label: 'Growing the toolkit',
     hint: 'AirAsia Academy',
     body:
-      'I strengthened that path through the AirAsia Academy Software Engineer Reskilling Programme — React, Node.js, MongoDB, and Go — so the toolkit matched the ambition: full-stack delivery, not only patches and scripts.',
+      'To strengthen that path, I completed the AirAsia Academy Software Engineer Reskilling Programme, covering React, Node.js, MongoDB, and Go. It sharpened my full-stack capabilities and gave me a more modern engineering toolkit, matching the kind of solutions I wanted to build: practical, scalable, and ready for production.',
   },
   {
-    label: 'Still the same thread',
+    label: 'What drives me now',
     hint: 'Today',
     body:
-      'The through-line never changed: curiosity first, persistence when it gets boring, and the satisfaction of shipping something that works for someone else. The tools change; the mindset does not.',
+      'Today, I work as a full-stack engineer building systems that solve real business needs — from agricultural platforms and manpower management tools to certificate generation and AI-integrated workflows. The technologies continue to evolve, but my approach stays the same: stay curious, build with intention, and create software that genuinely helps people.',
   },
-]
+];
 
 function MilestoneList({ items, isContinuation = false }) {
   return (

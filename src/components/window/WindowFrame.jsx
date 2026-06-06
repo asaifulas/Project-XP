@@ -19,10 +19,11 @@ import {
 /**
  * @param {'xp' | 'none'} [chrome]
  *   `none`: no XP title bar or menu; embed custom chrome and use `useFramelessWindow()`.
- * @param {'default' | 'word' | 'excel' | 'ppt' | 'pdf' | 'folder' | 'ie'} [shell]
+ * @param {'default' | 'word' | 'excel' | 'ppt' | 'ppt-full' | 'pdf' | 'folder' | 'ie'} [shell]
  *   `word`: Word 2003–style workspace with centered A4 page (see registry `window.shell`).
  *   `excel`: Excel 2003–style grid workspace (toolbars, formula bar, sheets).
  *   `ppt`: PowerPoint 2003–style slide workspace (outline + stage).
+ *   `ppt-full`: Self-contained deck fills the client area (no outer slide chrome).
  *   `pdf`: Adobe Reader–style viewer (see `PdfReaderApp`).
  *   `folder`: Explorer-style host (tasks pane + main area for nested app shortcuts). Restored size uses 1024×768; maximize fills the desktop as usual.
  *   `ie`: Internet Explorer 7–style chrome with embedded browsing area (see `InternetExplorerApp`).
@@ -291,6 +292,7 @@ export default function WindowFrame({
                 : shell === 'word' ||
                     shell === 'excel' ||
                     shell === 'ppt' ||
+                    shell === 'ppt-full' ||
                     shell === 'pdf' ||
                     shell === 'folder' ||
                     shell === 'ie'
@@ -305,6 +307,7 @@ export default function WindowFrame({
             {!isFrameless && shell === 'ppt' ? (
               <PowerPointOfficeChrome>{children}</PowerPointOfficeChrome>
             ) : null}
+            {!isFrameless && shell === 'ppt-full' ? children : null}
             {!isFrameless && shell === 'pdf' ? children : null}
             {!isFrameless && shell === 'ie' ? children : null}
             {!isFrameless && shell === 'folder' ? (
@@ -317,6 +320,7 @@ export default function WindowFrame({
             {shell !== 'word' &&
             shell !== 'excel' &&
             shell !== 'ppt' &&
+            shell !== 'ppt-full' &&
             shell !== 'pdf' &&
             shell !== 'folder' &&
             shell !== 'ie'
