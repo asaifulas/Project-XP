@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { MyComputerDetailsPane } from './MyComputerContent'
+import { useShellStore } from '../../../stores/useShellStore'
 
 /** Small yellow folder glyph (XP-style) */
 function MiniFolder({ className = 'h-3.5 w-4' }) {
@@ -74,11 +76,16 @@ function TaskPaneSection({ title, children: sectionChildren }) {
   )
 }
 
-function TaskLink({ icon, label }) {
+function TaskLink({ icon, label, onClick, disabled = false }) {
   return (
     <button
       type="button"
-      className="flex w-full cursor-default items-start gap-2 rounded-sm py-0.5 pl-0.5 pr-1 text-left hover:bg-[#d6e8ff]"
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        'flex w-full cursor-default items-start gap-2 rounded-sm py-0.5 pl-0.5 pr-1 text-left',
+        disabled ? 'opacity-70' : 'hover:bg-[#d6e8ff]',
+      ].join(' ')}
     >
       <span className="mt-0.5 shrink-0">{icon}</span>
       <span className="text-[11px] leading-snug text-[#215dc6] underline-offset-1 hover:underline">{label}</span>
@@ -108,9 +115,14 @@ function NavOrb({ dir, disabled }) {
 
 /**
  * Windows XP Explorer–style host: menu, standard-buttons toolbar, address bar, task pane, main pane.
+ *
+ * @param {'default' | 'myComputer'} [variant]
  */
-export default function FolderExplorerChrome({ addressPath, children }) {
+export default function FolderExplorerChrome({ addressPath, children, variant = 'default' }) {
   const menuItems = ['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']
+  const isMyComputer = variant === 'myComputer'
+  const setSystemPropertiesOpen = useShellStore((s) => s.setSystemPropertiesOpen)
+  const AddressIcon = isMyComputer ? MiniComputer : MiniFolder
 
   const rebarStrip =
     'border-b border-[#aca899] bg-[linear-gradient(180deg,#fffcf8_0%,#f0ebe0_40%,#e4dfd4_100%)] shadow-[inset_0_1px_0_#fff]'
@@ -203,7 +215,7 @@ export default function FolderExplorerChrome({ addressPath, children }) {
         <span className="shrink-0 pl-0.5 text-[11px] font-normal text-[#5c5346]">Address</span>
         <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-sm border border-[#7f9db9] bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)]">
           <div className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5">
-            <MiniFolder className="h-3.5 w-4 shrink-0" />
+            <AddressIcon className="h-3.5 w-4 shrink-0" />
             <div className="min-w-0 flex-1 truncate font-xp text-[11px] leading-tight text-black">{addressPath}</div>
           </div>
           <button
@@ -235,45 +247,90 @@ export default function FolderExplorerChrome({ addressPath, children }) {
           }}
           aria-label="Tasks and other places"
         >
-          <TaskPaneSection title="File and Folder Tasks">
-            <ul className="space-y-0">
-              <li>
-                <TaskLink icon={<MiniFolder />} label="Make a new folder" />
-              </li>
-              <li>
-                <TaskLink icon={<MiniFolder />} label="Publish this folder to the Web" />
-              </li>
-              <li>
-                <TaskLink icon={<MiniFolder />} label="Share this folder" />
-              </li>
-            </ul>
-          </TaskPaneSection>
+          {isMyComputer ? (
+            <>
+              <TaskPaneSection title="System Tasks">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink
+                      icon={<MiniComputer />}
+                      label="View system information"
+                      onClick={() => setSystemPropertiesOpen(true)}
+                    />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Add or remove programs" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Change a setting" disabled />
+                  </li>
+                </ul>
+              </TaskPaneSection>
 
-          <TaskPaneSection title="Other Places">
-            <ul className="space-y-0">
-              <li>
-                <TaskLink icon={<MiniFolder />} label="Documents and Settings" />
-              </li>
-              <li>
-                <TaskLink icon={<MiniFolder />} label="My Documents" />
-              </li>
-              <li>
-                <TaskLink icon={<MiniFolder />} label="Shared Documents" />
-              </li>
-              <li>
-                <TaskLink icon={<MiniComputer />} label="My Computer" />
-              </li>
-              <li>
-                <TaskLink icon={<MiniNetwork />} label="My Network Places" />
-              </li>
-            </ul>
-          </TaskPaneSection>
+              <TaskPaneSection title="Other Places">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink icon={<MiniNetwork />} label="My Network Places" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="My Documents" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Shared Documents" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Control Panel" disabled />
+                  </li>
+                </ul>
+              </TaskPaneSection>
 
-          <TaskPaneSection title="Details">
-            <p className="px-0.5 text-[10px] leading-snug text-[#4a5568]">
-              Select an item in the view to read its description.
-            </p>
-          </TaskPaneSection>
+              <TaskPaneSection title="Details">
+                <MyComputerDetailsPane />
+              </TaskPaneSection>
+            </>
+          ) : (
+            <>
+              <TaskPaneSection title="File and Folder Tasks">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Make a new folder" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Publish this folder to the Web" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Share this folder" disabled />
+                  </li>
+                </ul>
+              </TaskPaneSection>
+
+              <TaskPaneSection title="Other Places">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Documents and Settings" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="My Documents" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Shared Documents" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniComputer />} label="My Computer" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniNetwork />} label="My Network Places" disabled />
+                  </li>
+                </ul>
+              </TaskPaneSection>
+
+              <TaskPaneSection title="Details">
+                <p className="px-0.5 text-[10px] leading-snug text-[#4a5568]">
+                  Select an item in the view to read its description.
+                </p>
+              </TaskPaneSection>
+            </>
+          )}
         </aside>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-white">{children}</div>

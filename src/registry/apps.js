@@ -35,6 +35,7 @@ import FolderApp from '../components/apps/folder/FolderApp'
 import InternetExplorerApp from '../components/apps/ie/InternetExplorerApp'
 import PdfReaderApp from '../components/apps/pdf/PdfReaderApp'
 import WinampApp from '../components/apps/winamp/WinampApp'
+import MyComputerContent from '../components/apps/folder/MyComputerContent'
 import AboutWindowContent from '../components/windows/AboutWindowContent'
 import BiodataWindowContent from '../components/windows/BiodataWindowContent'
 import BlankPowerPointContent from '../components/windows/BlankPowerPointContent'
@@ -45,6 +46,7 @@ import ProfileWindowContent from '../components/windows/ProfileWindowContent'
 import ExperiencePowerPointContent from '../components/windows/ExperiencePowerPointContent'
 
 import resumePdfUrl from '../assets/mine/Latest Resume Saiful.pdf?url'
+import projectsPdfUrl from '../assets/mine/Projects_Saiful.pdf?url'
 
 export const EXTERNAL_URLS = {
   whatsapp:
@@ -89,7 +91,7 @@ export const APPS = [
     title: 'Welcome.doc - Microsoft Word',
     icon: docIcon,
     group: 'Office',
-    desktop: { label: 'Welcome.doc', order: 0 },
+    desktop: { label: 'Welcome.doc', order: 8.2 },
     stackable: true,
     window: {
       showMenuBar: false,
@@ -100,7 +102,7 @@ export const APPS = [
   },
   {
     id: 'my_computer',
-    path: '/about',
+    path: '/my_computer',
     page: AboutPage,
     title: 'My Computer',
     icon: myComputerIcon,
@@ -113,13 +115,14 @@ export const APPS = [
       className: '',
       shell: 'folder',
       explorerAddressPath: 'My Computer',
+      explorerVariant: 'myComputer',
     },
-    renderStack: () => createElement(AboutWindowContent),
+    renderStack: () => createElement(MyComputerContent),
   },
   {
     id: 'my_docs',
-    path: '/about',
-    page: AboutPage,
+    path: '/my_documents',
+    page: FolderPage,
     title: 'My Documents',
     icon: myDocsIcon,
     group: 'Office',
@@ -132,11 +135,11 @@ export const APPS = [
       shell: 'folder',
       explorerAddressPath: 'C:\\Documents and Settings\\My Documents',
     },
-    renderStack: () => createElement(AboutWindowContent),
+    renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
   },
   {
     id: 'ie',
-    path: '/about',
+    path: '/internet_explorer',
     page: AboutPage,
     title: 'Internet Explorer',
     icon: ieIcon,
@@ -193,7 +196,7 @@ export const APPS = [
   },
   {
     id: 'office_word',
-    path: '/biodata',
+    path: '/word',
     page: BiodataPage,
     title: 'Document1 - Microsoft Word',
     icon: wordIcon,
@@ -209,7 +212,7 @@ export const APPS = [
   },
   {
     id: 'office_excel',
-    path: '/biodata',
+    path: '/excel',
     page: BiodataPage,
     title: 'Book1 - Microsoft Excel',
     icon: excelIcon,
@@ -225,7 +228,7 @@ export const APPS = [
   },
   {
     id: 'office_ppt',
-    path: '/biodata',
+    path: '/ppt',
     page: BiodataPage,
     title: 'Presentation1 - Microsoft PowerPoint',
     icon: ppIcon,
@@ -352,8 +355,24 @@ export const APPS = [
     renderStack: () => createElement(PdfReaderApp, { src: resumePdfUrl }),
   },
   {
+    id: 'acrobat_projects',
+    path: '/pdf',
+    page: PdfPage,
+    title: 'Projects_Saiful.pdf - Adobe Reader',
+    icon: pdfIcon,
+    group: 'Office',
+    desktop: { label: 'Projects_Saiful.pdf', order: 15 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'pdf',
+    },
+    renderStack: () => createElement(PdfReaderApp, { src: projectsPdfUrl }),
+  },
+  {
     id: 'whatsapp',
-    desktop: { label: 'WhatsApp', order: 15 },
+    desktop: { label: 'WhatsApp', order: 16 },
     icon: whatsappIcon,
     group: 'Connect',
     externalUrl: EXTERNAL_URLS.whatsapp,
@@ -361,7 +380,7 @@ export const APPS = [
   },
   {
     id: 'linkedin',
-    desktop: { label: 'LinkedIn', order: 16 },
+    desktop: { label: 'LinkedIn', order: 17 },
     icon: linkedinIcon,
     group: 'Connect',
     externalUrl: EXTERNAL_URLS.linkedin,
@@ -369,7 +388,7 @@ export const APPS = [
   },
   {
     id: 'gmail',
-    desktop: { label: 'Gmail', order: 17 },
+    desktop: { label: 'Gmail', order: 18 },
     icon: gmailIcon,
     group: 'Connect',
     externalUrl: EXTERNAL_URLS.gmail,
@@ -377,7 +396,7 @@ export const APPS = [
   },
   {
     id: 'github',
-    desktop: { label: 'GitHub', order: 18 },
+    desktop: { label: 'GitHub', order: 19 },
     icon: githubIcon,
     group: 'Connect',
     externalUrl: EXTERNAL_URLS.github,
@@ -420,19 +439,21 @@ export const APPS = [
   },
   {
     id: 'recycle',
-    path: '/about',
-    page: AboutPage,
+    path: '/recycle_bin',
+    page: FolderPage,
     title: 'Recycle Bin',
     icon: recycleIcon,
     group: 'Office',
     desktop: { label: 'Recycle Bin', order: 999 },
     stackable: true,
+    children: [],
     window: {
-      showMenuBar: true,
+      showMenuBar: false,
       className: '',
-      shell: 'default',
+      shell: 'folder',
+      explorerAddressPath: 'Recycle Bin',
     },
-    renderStack: () => createElement(AboutWindowContent),
+    renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
   },
 ]
 

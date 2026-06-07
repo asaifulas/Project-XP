@@ -14,7 +14,7 @@ import {
  * @param {Array<{ id: string, desktop: { label: string }, icon: string, path?: string, externalUrl?: string }>} apps
  * @param {(app: { id: string, path?: string, externalUrl?: string }) => void} onOpenApp
  */
-export default function DesktopIconsArea({ apps, onOpenApp }) {
+export default function DesktopIconsArea({ apps, onOpenApp, onIconContextMenu }) {
   const containerRef = useRef(null)
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const positions = useDesktopIconStore((s) => s.positions)
@@ -78,6 +78,9 @@ export default function DesktopIconsArea({ apps, onOpenApp }) {
             bounds={bounds}
             onPositionChange={(next) => setIconPosition(app.id, next)}
             onOpen={() => onOpenApp(app)}
+            onContextMenu={
+              onIconContextMenu ? (event) => onIconContextMenu(app, event) : undefined
+            }
           />
         )
       })}

@@ -48,8 +48,11 @@ export default function WindowFrame({
   chrome = 'xp',
   shell = 'default',
   allowMaximize = true,
+  allowMinimize = true,
   explorerAddressPath,
+  explorerVariant,
   compactRestoredFrame = false,
+  noClientPadding = false,
 }) {
   const [isOpen, setIsOpen] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -129,8 +132,7 @@ export default function WindowFrame({
       active: isActive,
       minimized: false,
     })
-    return () => removeProgram(pid)
-  }, [pid, title, iconSrc, isActive, upsertProgram, removeProgram])
+  }, [pid, title, iconSrc, isActive, upsertProgram])
 
   useEffect(() => {
     if (!program) return
@@ -276,6 +278,7 @@ export default function WindowFrame({
             <WindowControls
               isMaximized={isMaximized}
               maximizeDisabled={!allowMaximize}
+              minimizeDisabled={!allowMinimize}
               onMinimize={handleMinimize}
               onToggleMaximize={handleToggleMaximize}
               onClose={handleClose}
@@ -298,7 +301,7 @@ export default function WindowFrame({
                     shell === 'ie'
                   ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-0'
                   : compactRestoredFrame
-                    ? 'xp-client shrink-0 overflow-visible p-4'
+                    ? `xp-client shrink-0 overflow-visible ${noClientPadding ? 'p-0' : 'p-4'}`
                     : 'xp-client flex min-h-0 flex-1 overflow-auto p-4'
             }
           >
@@ -313,6 +316,7 @@ export default function WindowFrame({
             {!isFrameless && shell === 'folder' ? (
               <FolderExplorerChrome
                 addressPath={explorerAddressPath ?? `C:\\Documents and Settings\\${title}`}
+                variant={explorerVariant ?? 'default'}
               >
                 {children}
               </FolderExplorerChrome>

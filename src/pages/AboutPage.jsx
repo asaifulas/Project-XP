@@ -51,10 +51,13 @@ export default function AboutPage() {
         shell={shell}
         allowMaximize={win.allowMaximize ?? true}
         explorerAddressPath={win.explorerAddressPath}
+        explorerVariant={win.explorerVariant}
         onClose={() => closeWindowAtPath(navigate, location, stackKey)}
       >
         {app?.id === 'ie' ? (
           <InternetExplorerApp initialUrl={ieInitial} onCaptionChange={setIeCaption} />
+        ) : app?.renderStack ? (
+          app.renderStack({ app, keyboardActive: true })
         ) : (
           <AboutWindowContent />
         )}

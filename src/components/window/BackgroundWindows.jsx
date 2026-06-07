@@ -34,6 +34,7 @@ export default function BackgroundWindows() {
           shell,
           allowMaximize,
           explorerAddressPath: registryExplorerPath,
+          explorerVariant,
           compactFrame,
         } = getWindowFrameOptions(stackKey)
         const title = getWindowTitle(stackKey)
@@ -59,6 +60,7 @@ export default function BackgroundWindows() {
                 ? (registryExplorerPath ?? `C:\\Documents and Settings\\${title}`)
                 : undefined
             }
+            explorerVariant={resolvedShell === 'folder' ? explorerVariant : undefined}
             onClose={() => closeWindowAtPath(navigate, location, stackKey)}
             onActivate={() => activateBackgroundWindow(navigate, location, stackKey)}
           >

@@ -13,6 +13,13 @@ const STACK = new Set([
   '/pdf',
   '/folder',
   '/gallery',
+  '/my_computer',
+  '/my_documents',
+  '/internet_explorer',
+  '/recycle_bin',
+  '/word',
+  '/excel',
+  '/ppt',
 ])
 
 export function isStackablePath(pathname) {

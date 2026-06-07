@@ -11,6 +11,10 @@ import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 import { getDesktopApps } from '../../registry/apps'
 import { openExternalUrl } from '../../utils/openExternalUrl'
 import { useDesktopIconStore } from '../../stores/useDesktopIconStore'
+import DesktopIconContextMenu from '../desktop/DesktopIconContextMenu'
+import SystemPropertiesContent from '../windows/SystemPropertiesContent'
+import DisplayPropertiesContent from '../windows/DisplayPropertiesContent'
+import myComputerIcon from '../../assets/icons/my_computer.png'
 
 /**
  * Desktop shell: workspace + Windows XP–style taskbar.
@@ -27,15 +31,27 @@ export default function AppLayout({ children }) {
     x: 0,
     y: 0,
   })
-  const [wallpaperSettingsOpen, setWallpaperSettingsOpen] = useState(false)
+  const systemPropertiesOpen = useShellStore((s) => s.systemPropertiesOpen)
+  const setSystemPropertiesOpen = useShellStore((s) => s.setSystemPropertiesOpen)
+  const wallpaperSettingsOpen = useShellStore((s) => s.wallpaperSettingsOpen)
+  const setWallpaperSettingsOpen = useShellStore((s) => s.setWallpaperSettingsOpen)
+  const [iconContextMenu, setIconContextMenu] = useState({
+    open: false,
+    x: 0,
+    y: 0,
+    appId: null,
+  })
 
   useEffect(() => {
-    const closeMenu = () =>
+    const closeMenu = () => {
       setContextMenu((menu) => (menu.open ? { ...menu, open: false } : menu))
+      setIconContextMenu((menu) => (menu.open ? { ...menu, open: false, appId: null } : menu))
+    }
     const onEscape = (event) => {
       if (event.key === 'Escape') {
         closeMenu()
         setWallpaperSettingsOpen(false)
+        setSystemPropertiesOpen(false)
       }
     }
 
@@ -52,6 +68,7 @@ export default function AppLayout({ children }) {
 
   const handleDesktopContextMenu = (event) => {
     event.preventDefault()
+    closeIconContextMenu()
     const menuWidth = 220
     const menuHeight = 120
     const nextX = Math.max(0, Math.min(event.clientX, window.innerWidth - menuWidth))
@@ -80,9 +97,44 @@ export default function AppLayout({ children }) {
     setContextMenu((menu) => ({ ...menu, open: false }))
   }
 
+  const closeIconContextMenu = () => {
+    setIconContextMenu((menu) => (menu.open ? { ...menu, open: false, appId: null } : menu))
+  }
+
+  const handleIconContextMenu = (app, event) => {
+    if (app.id !== 'my_computer') return
+
+    const menuWidth = 196
+    const menuHeight = 280
+    const nextX = Math.max(0, Math.min(event.clientX, window.innerWidth - menuWidth))
+    const nextY = Math.max(0, Math.min(event.clientY, window.innerHeight - menuHeight))
+
+    closeContextMenu()
+    setIconContextMenu({
+      open: true,
+      x: nextX,
+      y: nextY,
+      appId: app.id,
+    })
+  }
+
+  const handleOpenSystemProperties = () => {
+    setSystemPropertiesOpen(true)
+    closeIconContextMenu()
+  }
+
   const desktopApps = getDesktopApps()
   const mainDesktopApps = desktopApps.filter((app) => app.id !== 'recycle')
   const recycleApp = desktopApps.find((app) => app.id === 'recycle')
+  const myComputerApp = mainDesktopApps.find((app) => app.id === 'my_computer')
+
+  const openDesktopApp = (app) => {
+    if (app.externalUrl) {
+      openExternalUrl(app.externalUrl)
+      return
+    }
+    openForegroundPreserveStack(navigate, location, app.path, app.id)
+  }
 
   return (
     <div className="flex h-svh flex-col overflow-hidden bg-xp-desktop font-xp text-xp-panel antialiased">
@@ -101,13 +153,8 @@ export default function AppLayout({ children }) {
           <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20 min-h-0 w-[max(0px,calc(100%-17.75rem))]">
             <DesktopIconsArea
               apps={mainDesktopApps}
-              onOpenApp={(app) => {
-                if (app.externalUrl) {
-                  openExternalUrl(app.externalUrl)
-                  return
-                }
-                openForegroundPreserveStack(navigate, location, app.path, app.id)
-              }}
+              onOpenApp={openDesktopApp}
+              onIconContextMenu={handleIconContextMenu}
             />
           </div>
           <div className="pointer-events-none absolute bottom-[42px] right-3 top-3 z-30 flex w-[260px] flex-col gap-2">
@@ -237,6 +284,43 @@ export default function AppLayout({ children }) {
           </div>
         ) : null}
 
+        {iconContextMenu.open && iconContextMenu.appId === 'my_computer' ? (
+          <DesktopIconContextMenu
+            x={iconContextMenu.x}
+            y={iconContextMenu.y}
+            onClose={closeIconContextMenu}
+            onOpen={() => myComputerApp && openDesktopApp(myComputerApp)}
+            onProperties={handleOpenSystemProperties}
+          />
+        ) : null}
+
+        {systemPropertiesOpen ? (
+          <div className="absolute inset-0 z-50">
+            <button
+              type="button"
+              aria-label="Close system properties"
+              className="absolute inset-0 h-full w-full bg-black/30"
+              onClick={() => setSystemPropertiesOpen(false)}
+            />
+            <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-6 pt-16">
+              <WindowFrame
+                programId="system-properties"
+                title="System Properties"
+                iconSrc={myComputerIcon}
+                onClose={() => setSystemPropertiesOpen(false)}
+                showMenuBar={false}
+                allowMaximize={false}
+                allowMinimize={false}
+                compactRestoredFrame
+                noClientPadding
+                className="pointer-events-auto w-[min(500px,calc(100%-24px))]"
+              >
+                <SystemPropertiesContent onClose={() => setSystemPropertiesOpen(false)} />
+              </WindowFrame>
+            </div>
+          </div>
+        ) : null}
+
         {wallpaperSettingsOpen ? (
           <div className="absolute inset-0 z-50">
             <button
@@ -245,84 +329,24 @@ export default function AppLayout({ children }) {
               className="absolute inset-0 h-full w-full bg-black/30"
               onClick={() => setWallpaperSettingsOpen(false)}
             />
-            <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-6">
+            <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-6 pt-16">
               <WindowFrame
                 programId="display-properties"
                 title="Display Properties"
                 onClose={() => setWallpaperSettingsOpen(false)}
                 showMenuBar={false}
                 allowMaximize={false}
+                allowMinimize={false}
                 compactRestoredFrame
+                noClientPadding
                 className="pointer-events-auto w-[min(560px,calc(100%-24px))]"
               >
-                <div className="mb-3 flex gap-2 border-b border-[#b7b4a8] text-[11px]">
-                  <span className="border border-[#b7b4a8] border-b-[#f8fafc] bg-[#f8fafc] px-3 py-1 font-semibold">
-                    Desktop
-                  </span>
-                  <span className="px-3 py-1 text-zinc-600">Screen Saver</span>
-                  <span className="px-3 py-1 text-zinc-600">Appearance</span>
-                  <span className="px-3 py-1 text-zinc-600">Settings</span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1.2fr]">
-                  <div className="border border-[#7f9db9] bg-white p-1">
-                    <div className="h-44 border border-[#404040] bg-black p-2">
-                      {currentWallpaper?.src ? (
-                        <div
-                          className="h-full w-full border border-[#8a8a8a] bg-cover bg-center"
-                          style={{ backgroundImage: `url(${currentWallpaper.src})` }}
-                        />
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-[11px] text-zinc-700">
-                      Preview of your current desktop background
-                    </p>
-                  </div>
-
-                  <div className="border border-[#7f9db9] bg-white p-1">
-                    <div className="max-h-56 overflow-auto">
-                      {wallpapers.map((wallpaper) => {
-                        const isActive = currentWallpaper?.id === wallpaper.id
-
-                        return (
-                          <button
-                            key={wallpaper.id}
-                            type="button"
-                            onClick={() => setWallpaper(wallpaper.id)}
-                            className={`flex w-full items-center gap-2 border px-2 py-1 text-left text-xs ${
-                              isActive
-                                ? 'border-[#316ac5] bg-[#316ac5] text-white'
-                                : 'border-transparent hover:border-[#9ab8e8] hover:bg-[#eaf3ff]'
-                            }`}
-                          >
-                            <div
-                              className="h-10 w-14 shrink-0 border border-[#666] bg-cover bg-center"
-                              style={{ backgroundImage: `url(${wallpaper.src})` }}
-                            />
-                            <span className="truncate">{wallpaper.name}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end gap-2 border-t border-[#b7b4a8] pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setWallpaperSettingsOpen(false)}
-                    className="border border-[#7f9db9] bg-[#ece9d8] px-4 py-1 text-xs shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#aca899]"
-                  >
-                    OK
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWallpaperSettingsOpen(false)}
-                    className="border border-[#7f9db9] bg-[#ece9d8] px-4 py-1 text-xs shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#aca899]"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                <DisplayPropertiesContent
+                  wallpapers={wallpapers}
+                  currentWallpaper={currentWallpaper}
+                  onSelectWallpaper={setWallpaper}
+                  onClose={() => setWallpaperSettingsOpen(false)}
+                />
               </WindowFrame>
             </div>
           </div>

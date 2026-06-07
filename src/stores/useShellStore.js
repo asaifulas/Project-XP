@@ -38,6 +38,11 @@ export const useShellStore = create((set) => ({
   windowFramePositions: {},
   wallpapers,
   currentWallpaper: defaultWallpaper,
+  systemPropertiesOpen: false,
+  wallpaperSettingsOpen: false,
+
+  setSystemPropertiesOpen: (open) => set({ systemPropertiesOpen: open }),
+  setWallpaperSettingsOpen: (open) => set({ wallpaperSettingsOpen: open }),
 
   toggleStartMenu: () => set((s) => ({ startMenuOpen: !s.startMenuOpen })),
   closeStartMenu: () => set({ startMenuOpen: false }),

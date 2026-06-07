@@ -20,6 +20,7 @@ export default function DesktopIcon({
   position,
   bounds,
   onPositionChange,
+  onContextMenu,
   className = '',
 }) {
   const lastClickAtRef = useRef(0)
@@ -151,6 +152,11 @@ export default function DesktopIcon({
       onDoubleClick={(e) => {
         e.preventDefault()
         onOpen?.()
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onContextMenu?.(event)
       }}
       aria-label={label}
     >

@@ -17,7 +17,13 @@ const milestones = [
       'In secondary school, that curiosity found its first real direction. I helped manage the school website on Joomla, and outside of that I taught myself how to build and maintain minisites, WordPress installations, and everyday web systems. Broken plugins, backup issues, theme adjustments, and small fixes became valuable lessons — and little by little, the web stopped being mysterious and started feeling like a craft I wanted to master.',
   },
   {
-    label: 'Hands on learning',
+    label: 'First real troubleshooting',
+    hint: 'Early coding years',
+    body:
+      'By the time I was coding seriously, I was already spending nights buried in Stack Overflow tabs, trying to understand why something broke and how to make it work again. There was a strange kind of satisfaction in opening many tabs, chasing clues, testing fixes, and slowly closing each tab one by one once the problem was solved. That process taught me how to think through uncertainty instead of panicking, and how to treat every bug as a question waiting for the right answer.',
+  },
+  {
+    label: 'Hands-on learning',
     hint: 'Hobby years',
     body:
       'Alongside web development, I spent time experimenting with Arduino and small hardware projects. From azan clocks to line followers and other simple builds, I learned the discipline of testing, debugging, and patiently solving problems when the result was not immediately visible. Those projects shaped the way I think: practical, structured, and always driven by curiosity.',
@@ -41,10 +47,10 @@ const milestones = [
       'To strengthen that path, I completed the AirAsia Academy Software Engineer Reskilling Programme, covering React, Node.js, MongoDB, and Go. It sharpened my full-stack capabilities and gave me a more modern engineering toolkit, matching the kind of solutions I wanted to build: practical, scalable, and ready for production.',
   },
   {
-    label: 'What drives me now',
+    label: 'Still learning, still building',
     hint: 'Today',
     body:
-      'Today, I work as a full-stack engineer building systems that solve real business needs — from agricultural platforms and manpower management tools to certificate generation and AI-integrated workflows. The technologies continue to evolve, but my approach stays the same: stay curious, build with intention, and create software that genuinely helps people.',
+      'Today, I work as a full-stack engineer building systems that solve real business needs — from agricultural platforms and manpower management tools to certificate generation and AI-integrated workflows. The technologies continue to evolve, but my approach stays the same: stay curious, build with intention, and create software that genuinely helps people. “I have been through the full process — endless tabs, broken builds, late-night debugging, community answers, AI assistance, and hard-won fixes. I am not a random vibe coder; I am someone who learned by doing the difficult part.”',
   },
 ];
 

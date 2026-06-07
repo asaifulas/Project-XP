@@ -7,9 +7,11 @@ import { buildPowerPointEnterTimeline, resetPowerPointSlide } from './powerPoint
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
 
 /** Animation finishes at this fraction of each slide's scroll section. */
-const ANIM_SCROLL_PORTION = 0.62
+const ANIM_SCROLL_PORTION = 0.45
+/** Stay on the finished slide until this fraction before advancing. */
+const STAY_SCROLL_END = 0.82
 /** Total pinned scroll distance per slide (× viewport height). */
-const SECTION_SCROLL_MULTIPLIER = 1.55
+const SECTION_SCROLL_MULTIPLIER = 2.15
 
 /**
  * Extend timeline so scrub reaches full animation at ANIM_SCROLL_PORTION scroll progress.
@@ -38,6 +40,7 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
   const [scrollHint, setScrollHint] = useState('Scroll to animate this slide')
 
   const stageRef = useRef(null)
+  const stageWrapRef = useRef(null)
   const sectionRefs = useRef(/** @type {(HTMLElement | null)[]} */ ([]))
   const pinRefs = useRef(/** @type {(HTMLElement | null)[]} */ ([]))
   const slideRootsRef = useRef(/** @type {(HTMLElement | null)[]} */ ([]))
@@ -158,8 +161,8 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
 
           if (animProgress < 0.98) {
             setScrollHint('Scroll to animate this slide')
-          } else if (self.progress < 0.98) {
-            setScrollHint('Keep scrolling for next slide')
+          } else if (self.progress < STAY_SCROLL_END * 0.98) {
+            setScrollHint('Stay a moment — keep scrolling for next slide')
           } else {
             setScrollHint(index >= total - 1 ? 'End of presentation' : 'Next slide')
           }
@@ -174,12 +177,12 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
         },
         snap: {
           snapTo: (progress) => {
-            if (progress < ANIM_SCROLL_PORTION * 0.45) return 0
-            if (progress < ANIM_SCROLL_PORTION * 1.02) return ANIM_SCROLL_PORTION
+            if (progress < ANIM_SCROLL_PORTION * 0.4) return 0
+            if (progress < STAY_SCROLL_END) return ANIM_SCROLL_PORTION
             return 1
           },
-          duration: { min: 0.18, max: 0.42 },
-          delay: 0.04,
+          duration: { min: 0.22, max: 0.5 },
+          delay: 0.06,
           ease: 'power1.inOut',
         },
       })
@@ -235,16 +238,34 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
 
   useEffect(() => {
     const stage = stageRef.current
-    if (!stage) return undefined
+    const wrap = stageWrapRef.current
+    if (!stage || !wrap) return undefined
 
     const onWheel = (event) => {
-      if (stage.scrollHeight <= stage.clientHeight + 2) return
+      const maxScroll = stage.scrollHeight - stage.clientHeight
+      if (maxScroll <= 2) return
+
+      let delta = event.deltaY
+      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) delta *= 16
+      else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) delta *= stage.clientHeight
+
+      const nextTop = gsap.utils.clamp(0, maxScroll, stage.scrollTop + delta)
+      const canScrollDown = delta > 0 && stage.scrollTop < maxScroll - 0.5
+      const canScrollUp = delta < 0 && stage.scrollTop > 0.5
+
+      if (!canScrollDown && !canScrollUp) return
+
       event.preventDefault()
       event.stopPropagation()
+
+      if (nextTop !== stage.scrollTop) {
+        stage.scrollTop = nextTop
+        ScrollTrigger.update()
+      }
     }
 
-    stage.addEventListener('wheel', onWheel, { passive: false })
-    return () => stage.removeEventListener('wheel', onWheel)
+    wrap.addEventListener('wheel', onWheel, { passive: false, capture: true })
+    return () => wrap.removeEventListener('wheel', onWheel, { capture: true })
   }, [])
 
   const scrollStageTo = useCallback((y, duration = 0.55) => {
@@ -281,10 +302,16 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
 
       const progress = st.progress
       const animDone = progress >= ANIM_SCROLL_PORTION * 0.98
+      const stayDone = progress >= STAY_SCROLL_END * 0.98
 
       if (direction > 0) {
         if (!animDone) {
           const targetY = st.start + (st.end - st.start) * ANIM_SCROLL_PORTION
+          scrollStageTo(targetY)
+          return
+        }
+        if (!stayDone) {
+          const targetY = st.start + (st.end - st.start) * STAY_SCROLL_END
           scrollStageTo(targetY)
           return
         }
@@ -294,6 +321,11 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
         return
       }
 
+      if (progress > STAY_SCROLL_END * 0.05) {
+        const targetY = st.start + (st.end - st.start) * ANIM_SCROLL_PORTION
+        scrollStageTo(targetY)
+        return
+      }
       if (progress > ANIM_SCROLL_PORTION * 0.05) {
         scrollStageTo(st.start)
         return
@@ -369,7 +401,10 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
             )
           })}
         </aside>
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#7b7b7b]">
+        <div
+          ref={stageWrapRef}
+          className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#7b7b7b]"
+        >
           <div
             ref={stageRef}
             tabIndex={0}
