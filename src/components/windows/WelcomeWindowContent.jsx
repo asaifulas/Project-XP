@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getAppById } from '../../registry/apps'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
+import { useShellStore } from '../../stores/useShellStore'
 import WordA4Page from '../window/WordA4Page'
 
 const DESKTOP_GUIDE_ITEMS = [
@@ -26,11 +27,26 @@ const DESKTOP_GUIDE_ITEMS = [
     appId: 'experience',
   },
   {
-    name: 'Projects.xls',
-    type: 'XLS',
-    typeClass: 'bg-[#217346] text-white',
+    name: 'Projects_Saiful.pdf',
+    type: 'PDF',
+    typeClass: 'bg-[#c0392b] text-white',
     description: 'Professional delivery: ops platforms, public-sector workflows, agritech, monitoring, and internal tools.',
-    appId: 'project',
+    appId: 'acrobat_projects',
+  },
+  {
+    name: 'System Properties',
+    type: 'SYS',
+    typeClass: 'bg-[#2457c5] text-white',
+    description:
+      'The real tech stack powering this desktop — React 19, Vite, Tailwind, GSAP, React DnD, Zustand, and more.',
+    action: 'systemProperties',
+  },
+  {
+    name: 'Winamp',
+    type: 'APP',
+    typeClass: 'bg-[#4a3728] text-[#ffcc00]',
+    description: 'Classic Winamp — bundled tracks plus upload your own audio and build a playlist.',
+    appId: 'winamp',
   },
   {
     name: 'Playground/',
@@ -55,8 +71,13 @@ const DESKTOP_GUIDE_ITEMS = [
   },
 ]
 
+function isGuideItemAvailable(item) {
+  if (item.action === 'systemProperties') return true
+  return item.appId != null && getAppById(item.appId)?.path != null
+}
+
 function DesktopGuideItem({ item, onOpen }) {
-  const available = item.appId != null && getAppById(item.appId)?.path != null
+  const available = isGuideItemAvailable(item)
 
   const body = (
     <div className="flex items-start gap-2">
@@ -104,7 +125,7 @@ function DesktopGuideItem({ item, onOpen }) {
     <li>
       <button
         type="button"
-        onClick={() => onOpen(item.appId)}
+        onClick={() => onOpen(item)}
         className="w-full rounded-sm border border-zinc-300/90 bg-white px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_1px_2px_rgba(0,0,0,0.08)] transition-colors hover:border-[#316ac5]/50 hover:bg-[#eef3fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#316ac5]"
       >
         {body}
@@ -116,11 +137,20 @@ function DesktopGuideItem({ item, onOpen }) {
 export default function WelcomeWindowContent() {
   const navigate = useNavigate()
   const location = useLocation()
+  const setSystemPropertiesOpen = useShellStore((s) => s.setSystemPropertiesOpen)
 
   const handleOpenApp = (appId) => {
     const app = getAppById(appId)
     if (!app?.path) return
     openForegroundPreserveStack(navigate, location, app.path, app.id)
+  }
+
+  const handleOpenItem = (item) => {
+    if (item.action === 'systemProperties') {
+      setSystemPropertiesOpen(true)
+      return
+    }
+    if (item.appId) handleOpenApp(item.appId)
   }
   return (
     <WordA4Page>
@@ -162,7 +192,7 @@ export default function WelcomeWindowContent() {
           </div>
           <ul className="m-0 list-none space-y-2 bg-[#f5f3eb] p-2.5">
             {DESKTOP_GUIDE_ITEMS.map((item) => (
-              <DesktopGuideItem key={item.name} item={item} onOpen={handleOpenApp} />
+              <DesktopGuideItem key={item.name} item={item} onOpen={handleOpenItem} />
             ))}
           </ul>
         </section>
@@ -171,7 +201,9 @@ export default function WelcomeWindowContent() {
           If you’re not sure where to start, follow the simplest path: open{' '}
           <span className="font-semibold">My_Journey.doc</span>, then{' '}
           <span className="font-semibold">Experience.ppt</span>, and then{' '}
-          <span className="font-semibold">Projects.xls</span>.
+          <span className="font-semibold">Projects_Saiful.pdf</span>. For a behind-the-scenes look at how
+          this site is built, open <span className="font-semibold">System Properties</span>. Queue something
+          up in <span className="font-semibold">Winamp</span> while you browse.
         </p>
 
         <p className="mt-4 text-justify">
