@@ -9,7 +9,7 @@ const clippySrcList = Object.values(
 )
 
 /** Larger than source (100×100) for readability; scaled with soft glow. */
-const CLIPPY_PX = 168
+const CLIPPY_PX = 120
 /** Horizontal layout mirrors `WidgetsSidebar.jsx`: `w-[260px]`, `right-3`, `top-3` (also `bottom-[42px]` on sidebar — workspace height already excludes taskbar). */
 const WIDGET_COL_W = 260
 const WIDGET_INSET_R = 12
