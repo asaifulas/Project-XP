@@ -20,6 +20,7 @@ const STACK = new Set([
   '/word',
   '/excel',
   '/ppt',
+  '/certimagic',
 ])
 
 export function isStackablePath(pathname) {

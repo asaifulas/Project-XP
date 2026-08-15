@@ -19,7 +19,7 @@ import {
 /**
  * @param {'xp' | 'none'} [chrome]
  *   `none`: no XP title bar or menu; embed custom chrome and use `useFramelessWindow()`.
- * @param {'default' | 'word' | 'excel' | 'ppt' | 'ppt-full' | 'pdf' | 'folder' | 'ie'} [shell]
+ * @param {'default' | 'word' | 'excel' | 'ppt' | 'ppt-full' | 'pdf' | 'folder' | 'ie' | 'certimagic'} [shell]
  *   `word`: Word 2003–style workspace with centered A4 page (see registry `window.shell`).
  *   `excel`: Excel 2003–style grid workspace (toolbars, formula bar, sheets).
  *   `ppt`: PowerPoint 2003–style slide workspace (outline + stage).
@@ -27,6 +27,7 @@ import {
  *   `pdf`: Adobe Reader–style viewer (see `PdfReaderApp`).
  *   `folder`: Explorer-style host (tasks pane + main area for nested app shortcuts). Restored size uses 1024×768; maximize fills the desktop as usual.
  *   `ie`: Internet Explorer 7–style chrome with embedded browsing area (see `InternetExplorerApp`).
+ *   `certimagic`: Excel-look workbook that renders app children (sheet tabs live inside the app).
  * @param {boolean} [allowMaximize]
  *   When false, maximize/restore is disabled (e.g. Calculator, Winamp). Full-screen maximize only applies to XP chrome.
  * @param {string} [explorerAddressPath]
@@ -298,7 +299,8 @@ export default function WindowFrame({
                     shell === 'ppt-full' ||
                     shell === 'pdf' ||
                     shell === 'folder' ||
-                    shell === 'ie'
+                    shell === 'ie' ||
+                    shell === 'certimagic'
                   ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-0'
                   : compactRestoredFrame
                     ? `xp-client shrink-0 overflow-visible ${noClientPadding ? 'p-0' : 'p-4'}`
@@ -307,6 +309,7 @@ export default function WindowFrame({
           >
             {!isFrameless && shell === 'word' ? <WordOfficeChrome>{children}</WordOfficeChrome> : null}
             {!isFrameless && shell === 'excel' ? <ExcelOfficeChrome /> : null}
+            {!isFrameless && shell === 'certimagic' ? children : null}
             {!isFrameless && shell === 'ppt' ? (
               <PowerPointOfficeChrome>{children}</PowerPointOfficeChrome>
             ) : null}
@@ -327,7 +330,8 @@ export default function WindowFrame({
             shell !== 'ppt-full' &&
             shell !== 'pdf' &&
             shell !== 'folder' &&
-            shell !== 'ie'
+            shell !== 'ie' &&
+            shell !== 'certimagic'
               ? children
               : null}
           </div>

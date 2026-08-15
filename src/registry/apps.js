@@ -10,6 +10,7 @@ import JourneyPage from '../pages/JourneyPage'
 import ProfilePage from '../pages/ProfilePage'
 import PdfPage from '../pages/PdfPage'
 import WinampPage from '../pages/WinampPage'
+import CertiMagicPage from '../pages/CertiMagicPage'
 
 import calculatorIcon from '../assets/icons/calculator.svg'
 import docIcon from '../assets/icons/doc.png'
@@ -28,6 +29,7 @@ import xlsIcon from '../assets/icons/xls.png'
 import wordIcon from '../assets/icons/word.png'
 import excelIcon from '../assets/icons/excel.png'
 import ppIcon from '../assets/icons/pp.png'
+import certiMagicIcon from '../assets/icons/certimagic.png'
 
 import CalculatorApp from '../components/apps/calculator/CalculatorApp'
 import ExcelApp from '../components/apps/excel/ExcelApp'
@@ -35,6 +37,7 @@ import FolderApp from '../components/apps/folder/FolderApp'
 import InternetExplorerApp from '../components/apps/ie/InternetExplorerApp'
 import PdfReaderApp from '../components/apps/pdf/PdfReaderApp'
 import WinampApp from '../components/apps/winamp/WinampApp'
+import CertiMagicApp from '../components/apps/certimagic/CertiMagicApp'
 import MyComputerContent from '../components/apps/folder/MyComputerContent'
 import AboutWindowContent from '../components/windows/AboutWindowContent'
 import BiodataWindowContent from '../components/windows/BiodataWindowContent'
@@ -58,7 +61,7 @@ export const EXTERNAL_URLS = {
 
 /**
  * Window chrome presets (extend with excel, powerpoint, folder, etc.).
- * @typedef {'default' | 'word' | 'excel' | 'ppt' | 'ppt-full' | 'pdf' | 'folder' | 'ie'} WindowShell
+ * @typedef {'default' | 'word' | 'excel' | 'ppt' | 'ppt-full' | 'pdf' | 'folder' | 'ie' | 'certimagic'} WindowShell
  */
 
 /**
@@ -225,6 +228,22 @@ export const APPS = [
       shell: 'excel',
     },
     renderStack: () => createElement(ExcelApp),
+  },
+  {
+    id: 'certimagic',
+    path: '/certimagic',
+    page: CertiMagicPage,
+    title: 'CertiMagic.xls - Microsoft Excel',
+    icon: certiMagicIcon,
+    group: 'Office',
+    desktop: { label: 'CertiMagic', order: 7.5 },
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'certimagic',
+    },
+    renderStack: () => createElement(CertiMagicApp),
   },
   {
     id: 'office_ppt',
