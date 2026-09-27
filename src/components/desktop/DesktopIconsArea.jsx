@@ -13,8 +13,14 @@ import {
 /**
  * @param {Array<{ id: string, desktop: { label: string }, icon: string, path?: string, externalUrl?: string }>} apps
  * @param {(app: { id: string, path?: string, externalUrl?: string }) => void} onOpenApp
+ * @param {boolean} [draggable] When false, icons sit in a wrapping grid and open on one tap.
  */
-export default function DesktopIconsArea({ apps, onOpenApp, onIconContextMenu }) {
+export default function DesktopIconsArea({
+  apps,
+  onOpenApp,
+  onIconContextMenu,
+  draggable = true,
+}) {
   const containerRef = useRef(null)
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const positions = useDesktopIconStore((s) => s.positions)
@@ -38,6 +44,25 @@ export default function DesktopIconsArea({ apps, onOpenApp, onIconContextMenu })
     () => computeDefaultDesktopIconPositions(apps.length, bounds),
     [apps.length, bounds.width, bounds.height],
   )
+
+  if (!draggable) {
+    return (
+      <div className="pointer-events-auto grid h-full min-h-0 w-full auto-rows-[112px] grid-cols-[repeat(auto-fill,minmax(100px,1fr))] content-start justify-items-center gap-y-1 overflow-x-hidden overflow-y-auto p-2 no-scrollbar [touch-action:pan-y]">
+        {apps.map((app) => (
+          <DesktopIcon
+            key={app.id}
+            label={app.desktop.label}
+            iconSrc={app.icon}
+            openOnSingleClick
+            onOpen={() => onOpenApp(app)}
+            onContextMenu={
+              onIconContextMenu ? (event) => onIconContextMenu(app, event) : undefined
+            }
+          />
+        ))}
+      </div>
+    )
+  }
 
   const areaPaddingX = 8
   const areaPaddingY = 8

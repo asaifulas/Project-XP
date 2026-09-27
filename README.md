@@ -13,8 +13,10 @@ Personal portfolio website inspired by **Windows XP**: a desktop UI, draggable w
 - **React Router**: routes represent the *foreground* window; URL encodes the multi-window stack
 - **Zustand**: small global store for “shell” state (running programs, active window, window positions, wallpaper)
 - **Tailwind CSS + custom CSS**: XP look-and-feel with utility classes plus a few handcrafted styles
-- **React DnD (HTML5 backend)**: drag behavior for windows (pointer-driven window movement)
+- **React DnD (HTML5 backend)**: drag **window title bars** only (desktop icons use pointer events)
 - **Vite**: fast dev server + builds; also used for importing local audio assets via `import.meta.glob`
+
+**Architecture (short):** see [docs/HOW-IT-WORKS.md](./docs/HOW-IT-WORKS.md) for apps registry, URL window stack, Zustand, and React DnD.
 
 ## Project structure (current)
 - `src/main.jsx`: mounts router + DnD provider

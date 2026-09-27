@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getAppById } from '../../registry/apps'
+import { openExternalUrl } from '../../utils/openExternalUrl'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 import { useShellStore } from '../../stores/useShellStore'
 import WordA4Page from '../window/WordA4Page'
@@ -69,11 +70,40 @@ const DESKTOP_GUIDE_ITEMS = [
     description: 'The formal CV — if you prefer the traditional version.',
     appId: 'acrobat_resume',
   },
+  {
+    name: 'WhatsApp',
+    type: 'CHAT',
+    typeClass: 'bg-[#128C7E] text-white',
+    description: 'Message me directly — the fastest way to say hello.',
+    appId: 'whatsapp',
+  },
+  {
+    name: 'LinkedIn',
+    type: 'IN',
+    typeClass: 'bg-[#0A66C2] text-white',
+    description: 'Work history, recommendations, and the public profile.',
+    appId: 'linkedin',
+  },
+  {
+    name: 'Gmail',
+    type: 'MAIL',
+    typeClass: 'bg-[#EA4335] text-white',
+    description: 'Email asaifulas@gmail.com if you prefer a longer note.',
+    appId: 'gmail',
+  },
+  {
+    name: 'GitHub',
+    type: 'GIT',
+    typeClass: 'bg-[#24292f] text-white',
+    description: 'Code, experiments, and the repos behind the work.',
+    appId: 'github',
+  },
 ]
 
 function isGuideItemAvailable(item) {
   if (item.action === 'systemProperties') return true
-  return item.appId != null && getAppById(item.appId)?.path != null
+  const app = item.appId ? getAppById(item.appId) : null
+  return Boolean(app?.path || app?.externalUrl)
 }
 
 function DesktopGuideItem({ item, onOpen }) {
@@ -139,18 +169,18 @@ export default function WelcomeWindowContent() {
   const location = useLocation()
   const setSystemPropertiesOpen = useShellStore((s) => s.setSystemPropertiesOpen)
 
-  const handleOpenApp = (appId) => {
-    const app = getAppById(appId)
-    if (!app?.path) return
-    openForegroundPreserveStack(navigate, location, app.path, app.id)
-  }
-
   const handleOpenItem = (item) => {
     if (item.action === 'systemProperties') {
       setSystemPropertiesOpen(true)
       return
     }
-    if (item.appId) handleOpenApp(item.appId)
+    const app = item.appId ? getAppById(item.appId) : null
+    if (!app) return
+    if (app.externalUrl) {
+      openExternalUrl(app.externalUrl)
+      return
+    }
+    if (app.path) openForegroundPreserveStack(navigate, location, app.path, app.id)
   }
   return (
     <WordA4Page>

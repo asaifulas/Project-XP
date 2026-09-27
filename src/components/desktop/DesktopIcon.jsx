@@ -21,6 +21,7 @@ export default function DesktopIcon({
   bounds,
   onPositionChange,
   onContextMenu,
+  openOnSingleClick = false,
   className = '',
 }) {
   const lastClickAtRef = useRef(0)
@@ -140,14 +141,16 @@ export default function DesktopIcon({
       onPointerUp={isDraggable ? handlePointerUp : undefined}
       onPointerCancel={isDraggable ? handlePointerCancel : undefined}
       onClick={
-        isDraggable
-          ? undefined
-          : () => {
-              const now = Date.now()
-              const within = now - lastClickAtRef.current < 350
-              lastClickAtRef.current = now
-              if (within) onOpen?.()
-            }
+        openOnSingleClick
+          ? () => onOpen?.()
+          : isDraggable
+            ? undefined
+            : () => {
+                const now = Date.now()
+                const within = now - lastClickAtRef.current < 350
+                lastClickAtRef.current = now
+                if (within) onOpen?.()
+              }
       }
       onDoubleClick={(e) => {
         e.preventDefault()

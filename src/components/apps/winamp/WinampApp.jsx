@@ -266,7 +266,10 @@ export default function WinampApp() {
       <div className="winamp-skin">
         {/* Main player */}
         <div className="winamp-module">
-          <div className="winamp-titlebar">
+          <div
+            className="winamp-titlebar"
+            onContextMenu={(event) => frame?.onTitleContextMenu?.(event)}
+          >
             <div
               ref={frame?.attachDragRef ?? null}
               className="winamp-titlebar-drag"

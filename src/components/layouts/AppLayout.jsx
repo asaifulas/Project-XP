@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PhoneDesktopPager from './PhoneDesktopPager'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Taskbar from '../taskbar/Taskbar'
 import { useShellStore } from '../../stores/useShellStore'
@@ -149,15 +150,34 @@ export default function AppLayout({ children }) {
           />
         ) : null}
         <div className="relative z-10 h-full">
-          {/* Explicit width: reserve `right-3` + `w-[260px]` for widgets/recycle. */}
-          <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20 min-h-0 w-[max(0px,calc(100%-17.75rem))]">
+          <div className="md:hidden">
+            <PhoneDesktopPager
+              apps={mainDesktopApps}
+              recycleApp={recycleApp}
+              onOpenApp={openDesktopApp}
+              onIconContextMenu={handleIconContextMenu}
+              onOpenRecycle={
+                recycleApp
+                  ? () =>
+                      openForegroundPreserveStack(
+                        navigate,
+                        location,
+                        recycleApp.path,
+                        recycleApp.id,
+                      )
+                  : undefined
+              }
+            />
+          </div>
+          {/* Desktop: reserve `right-3` + `w-[260px]` for widgets/recycle. */}
+          <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20 hidden min-h-0 w-[max(0px,calc(100%-17.75rem))] md:block">
             <DesktopIconsArea
               apps={mainDesktopApps}
               onOpenApp={openDesktopApp}
               onIconContextMenu={handleIconContextMenu}
             />
           </div>
-          <div className="pointer-events-none absolute bottom-[42px] right-3 top-3 z-30 flex w-[260px] flex-col gap-2">
+          <div className="pointer-events-none absolute bottom-[42px] right-3 top-3 z-30 hidden w-[260px] flex-col gap-2 md:flex">
             <div className="pointer-events-auto min-h-0 flex-1 overflow-y-auto no-scrollbar">
               <WidgetsSidebar />
             </div>

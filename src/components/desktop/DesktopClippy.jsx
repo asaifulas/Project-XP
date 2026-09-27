@@ -30,6 +30,22 @@ const TAIL_HALF_H = 8
 
 const CLIPPY_SESSION_KEY = 'porto-desktop-clippy-gif'
 
+/** Documents on the desktop, plus Winamp and CertiMagic. Not folders or system icons. */
+const CLIPPY_NAV_IDS = new Set([
+  'welcome',
+  'journey',
+  'profile',
+  'experience',
+  'biodata',
+  'about',
+  'project',
+  'side_project',
+  'acrobat_resume',
+  'acrobat_projects',
+  'winamp',
+  'certimagic',
+])
+
 function pickRandomClippySrc(exclude = null) {
   if (clippySrcList.length === 0) return ''
   if (clippySrcList.length === 1) return clippySrcList[0] ?? ''
@@ -82,18 +98,41 @@ function maxClippyX(containerWidth, groupWidth) {
   return Math.max(0, widgetColumnLeftX(containerWidth) - WIDGET_GAP - groupWidth)
 }
 
+/** Phone has no side-by-side sidebar, so only the character has to stay on screen. */
+function isPhoneContainer(containerWidth) {
+  return containerWidth < 768
+}
+
 function clampClippyPosition(containerWidth, containerHeight, groupWidth, groupHeight, x, y) {
+  if (isPhoneContainer(containerWidth)) {
+    const extraW = Math.max(0, groupWidth - CLIPPY_PX)
+    const extraH = Math.max(0, groupHeight - CLIPPY_PX)
+    return {
+      x: clamp(x, -extraW, Math.max(-extraW, containerWidth - groupWidth)),
+      y: clamp(y, -extraH, Math.max(-extraH, containerHeight - groupHeight)),
+    }
+  }
+
   return {
     x: clamp(x, 0, maxClippyX(containerWidth, groupWidth)),
     y: clamp(y, 0, Math.max(0, containerHeight - groupHeight)),
   }
 }
 
-function ClippyBalloon({ items, onNavigate, onClose, onShuffleLook, clippyPx }) {
+function ClippyBalloon({ items, onNavigate, onClose, onShuffleLook, clippyPx, ignoreClicksUntilRef }) {
   const tailBottomPx = clippyPx / 2 - TAIL_HALF_H
 
+  function swallowOpeningClick(event) {
+    if (Date.now() >= ignoreClicksUntilRef.current) return
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
   return (
-    <div className="pointer-events-auto relative flex max-h-[min(320px,45vh)] max-w-[min(240px,calc(100vw-20rem))] shrink-0 flex-col">
+    <div
+      className="pointer-events-auto relative flex max-h-[min(320px,45vh)] max-w-[min(240px,calc(100vw-1.5rem))] shrink-0 flex-col md:max-w-[min(240px,calc(100vw-20rem))]"
+      onClickCapture={swallowOpeningClick}
+    >
       <div
         className="relative rounded-xl border border-black/[0.06] bg-[#fffef0] px-2.5 pb-2 pl-2.5 pr-7 pt-2"
         style={{
@@ -158,6 +197,8 @@ export default function DesktopClippy() {
   const groupRef = useRef(null)
   const dragRef = useRef(null)
   const placedRef = useRef(false)
+  /** Phone fires a click on whatever appears under the finger after the balloon opens. */
+  const ignoreBalloonClicksUntilRef = useRef(0)
 
   const [src, setSrc] = useState(getInitialClippySrc)
   const [pos, setPos] = useState({ x: MARGIN, y: MARGIN })
@@ -171,14 +212,15 @@ export default function DesktopClippy() {
   }
 
   const navItems = useMemo(() => {
-    const desktop = getDesktopApps().map((app) => ({
-      key: app.id,
-      label: app.desktop.label,
-      path: app.path ?? '/',
-      appId: app.id,
-      externalUrl: app.externalUrl ?? null,
-    }))
-    return [{ key: 'home', label: 'Desktop', path: '/', appId: null }, ...desktop]
+    return getDesktopApps()
+      .filter((app) => CLIPPY_NAV_IDS.has(app.id))
+      .map((app) => ({
+        key: app.id,
+        label: app.desktop.label,
+        path: app.path ?? '/',
+        appId: app.id,
+        externalUrl: app.externalUrl ?? null,
+      }))
   }, [])
 
   const handleNav = (item) => {
@@ -208,17 +250,23 @@ export default function DesktopClippy() {
 
     placedRef.current = true
 
-    const maxX = maxClippyX(w, gw)
-    const minX = MARGIN
-    const flushBeside = Math.min(maxX, Math.max(minX, w - gw - WIDGET_COL_W - WIDGET_INSET_R - WIDGET_GAP))
-    const nudgeLeft = Math.min(56, Math.max(0, flushBeside - minX))
-    const x = flushBeside - (nudgeLeft > 0 ? Math.random() * nudgeLeft * 0.4 : 0)
+    let x
+    let y
+    if (isPhoneContainer(w)) {
+      x = w - gw - MARGIN
+      y = MARGIN
+    } else {
+      const maxX = maxClippyX(w, gw)
+      const minX = MARGIN
+      const flushBeside = Math.min(maxX, Math.max(minX, w - gw - WIDGET_COL_W - WIDGET_INSET_R - WIDGET_GAP))
+      const nudgeLeft = Math.min(56, Math.max(0, flushBeside - minX))
+      x = flushBeside - (nudgeLeft > 0 ? Math.random() * nudgeLeft * 0.4 : 0)
 
-    const maxY = Math.max(MARGIN, h - gh - MARGIN)
-    const bandTop = WIDGET_INSET_T
-    const bandBottom = Math.min(WIDGET_INSET_T + 180, maxY)
-    const y =
-      bandBottom > bandTop ? bandTop + Math.random() * (bandBottom - bandTop) : MARGIN
+      const maxY = Math.max(MARGIN, h - gh - MARGIN)
+      const bandTop = WIDGET_INSET_T
+      const bandBottom = Math.min(WIDGET_INSET_T + 180, maxY)
+      y = bandBottom > bandTop ? bandTop + Math.random() * (bandBottom - bandTop) : MARGIN
+    }
 
     setPos(clampClippyPosition(w, h, gw, gh, x, y))
   }, [])
@@ -278,6 +326,7 @@ export default function DesktopClippy() {
   const endDrag = (event) => {
     const state = dragRef.current
     if (state && !state.didDrag && !balloonOpen) {
+      ignoreBalloonClicksUntilRef.current = Date.now() + 500
       setBalloonOpen(true)
     }
 
@@ -306,6 +355,7 @@ export default function DesktopClippy() {
             onClose={() => setBalloonOpen(false)}
             onShuffleLook={shuffleClippyLook}
             clippyPx={CLIPPY_PX}
+            ignoreClicksUntilRef={ignoreBalloonClicksUntilRef}
           />
         ) : null}
         <div

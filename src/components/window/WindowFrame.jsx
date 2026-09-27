@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useDrag, useDragLayer } from 'react-dnd'
 import { getEmptyImage } from 'react-dnd-html5-backend'
 import { useShellStore } from '../../stores/useShellStore'
 import { FramelessWindowContext } from './FramelessWindowContext'
 import WindowControls from './WindowControls'
+import WindowTitleContextMenu from './WindowTitleContextMenu'
 import WindowMenuBar from './WindowMenuBar'
 import WordOfficeChrome from './WordOfficeChrome'
 import ExcelOfficeChrome from './ExcelOfficeChrome'
@@ -15,6 +17,24 @@ import {
   XP_STANDARD_FRAME_CLASS,
   XP_STANDARD_FRAME_HEIGHT_ONLY_CLASS,
 } from '../../constants/xpWindow'
+
+const PHONE_LAYOUT_QUERY = '(max-width: 767px)'
+
+function usePhoneLayout() {
+  const [isPhone, setIsPhone] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(PHONE_LAYOUT_QUERY).matches : false,
+  )
+
+  useEffect(() => {
+    const media = window.matchMedia(PHONE_LAYOUT_QUERY)
+    const onChange = () => setIsPhone(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  return isPhone
+}
 
 /**
  * @param {'xp' | 'none'} [chrome]
@@ -58,6 +78,7 @@ export default function WindowFrame({
   const [isOpen, setIsOpen] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
+  const [titleMenu, setTitleMenu] = useState(null)
   const programs = useShellStore((s) => s.runningPrograms)
   const upsertProgram = useShellStore((s) => s.upsertProgram)
   const removeProgram = useShellStore((s) => s.removeProgram)
@@ -88,11 +109,12 @@ export default function WindowFrame({
   const program = programs.find((p) => p.id === pid)
 
   const isFrameless = chrome === 'none'
+  const isPhone = usePhoneLayout()
 
   const [{ isDragging }, dragRef, previewRef] = useDrag(
     () => ({
       type: 'WINDOW_FRAME',
-      canDrag: isFrameless ? !isMaximized : !(isMaximized && allowMaximize),
+      canDrag: !isPhone && (isFrameless ? !isMaximized : !(isMaximized && allowMaximize)),
       item: () => ({
         pid,
         title,
@@ -111,7 +133,7 @@ export default function WindowFrame({
         })
       },
     }),
-    [allowMaximize, baseX, baseY, isFrameless, isMaximized, pid, setWindowFramePosition, title],
+    [allowMaximize, baseX, baseY, isFrameless, isMaximized, isPhone, pid, setWindowFramePosition, title],
   )
 
   const liveDelta = useDragLayer((monitor) =>
@@ -143,6 +165,29 @@ export default function WindowFrame({
   useEffect(() => {
     if (!allowMaximize && isMaximized) setIsMaximized(false)
   }, [allowMaximize, isMaximized])
+
+  useEffect(() => {
+    if (!titleMenu) return
+
+    const dismiss = () => setTitleMenu(null)
+    const onPointerDown = (event) => {
+      if (event.button !== 0) return
+      dismiss()
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') dismiss()
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      window.addEventListener('pointerdown', onPointerDown)
+    }, 0)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.clearTimeout(timeoutId)
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [titleMenu])
 
   if (!isOpen) return null
   if (isMinimized) return null
@@ -181,24 +226,39 @@ export default function WindowFrame({
     })
   }
 
+  function openTitleMenu(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    const menuWidth = 160
+    const menuHeight = 96
+    const x = Math.max(4, Math.min(event.clientX, window.innerWidth - menuWidth))
+    const y = Math.max(4, Math.min(event.clientY, window.innerHeight - menuHeight))
+    setTitleMenu({ x, y })
+  }
+
   const framelessValue = isFrameless
     ? {
         attachDragRef: dragRef,
-        onMinimize: handleMinimize,
+        onMinimize: allowMinimize ? handleMinimize : null,
         onClose: handleClose,
+        onTitleContextMenu: openTitleMenu,
       }
     : null
 
   /** Matches `.xp-taskbar { height: 34px }` in `index.css` — fill viewport above taskbar. */
   const maximizedXpClasses =
     'fixed left-0 right-0 top-0 z-[45] m-0 flex h-[calc(100svh-34px)] max-h-[calc(100svh-34px)] w-full max-w-none flex-col rounded-none border-x-0 border-t-0 shadow-[0_1px_0_rgba(0,0,0,0.25)]'
+  /** Phone: every open window fills the screen above the taskbar, ignoring desktop frame size. */
+  const phoneFillClasses =
+    'fixed inset-x-0 top-0 m-0 flex !h-[calc(100svh-34px)] !max-h-[calc(100svh-34px)] !w-full !max-w-none flex-col rounded-none border-x-0 border-t-0'
+  const fillsViewport = isPhone || (isMaximized && !isFrameless && allowMaximize)
 
   const hasExplicitWidthClass =
     /\bw-/.test(className) || /\bmax-w-/.test(className) || /\bmin-w-/.test(className)
 
   /** Restored XP frame: 1440×1080 by default; `shell: 'folder'` uses 1024×768 unless `className` / `compactRestoredFrame` specialize (e.g. Calculator, Winamp). */
   const useStandardRestoredFrame =
-    chrome === 'xp' && !isFrameless && !(isMaximized && allowMaximize)
+    !isPhone && chrome === 'xp' && !isFrameless && !(isMaximized && allowMaximize)
   const standardRestoredFrameClasses = useStandardRestoredFrame
     ? compactRestoredFrame
       ? 'flex flex-col'
@@ -216,25 +276,25 @@ export default function WindowFrame({
       <section
         className={[
           'pointer-events-auto will-change-transform',
-          isMaximized && !isFrameless && allowMaximize ? 'max-w-none' : 'absolute',
+          fillsViewport ? 'max-w-none' : 'absolute',
           isFrameless
             ? 'rounded-sm border-0 bg-transparent shadow-[0_14px_42px_rgba(0,0,0,0.55)]'
             : 'xp-window',
-          isMaximized && !isFrameless && allowMaximize ? maximizedXpClasses : '',
-          !isMaximized || isFrameless || !allowMaximize ? (isActive ? 'z-50' : 'z-[38]') : '',
+          isPhone ? phoneFillClasses : isMaximized && !isFrameless && allowMaximize ? maximizedXpClasses : '',
+          isPhone || !isMaximized || isFrameless || !allowMaximize ? (isActive ? 'z-50' : 'z-[38]') : '',
           !isActive ? 'opacity-[0.98]' : '',
-          isMaximized && isFrameless ? 'inset-2' : '',
-          !isMaximized || isFrameless
+          !isPhone && isMaximized && isFrameless ? 'inset-2' : '',
+          !fillsViewport || isFrameless
             ? ['left-0 top-0', standardRestoredFrameClasses].filter(Boolean).join(' ')
             : '',
-          isDragging && !isMaximized ? 'opacity-90' : '',
+          isDragging && !fillsViewport ? 'opacity-90' : '',
           className,
-          isMaximized && !isFrameless && allowMaximize ? '!w-full !max-w-none' : '',
+          fillsViewport ? '!w-full !max-w-none' : '',
         ]
           .filter(Boolean)
           .join(' ')}
         style={
-          isMaximized && !isFrameless && allowMaximize
+          fillsViewport
             ? undefined
             : { transform: `translate(${liveX}px, ${liveY}px)` }
         }
@@ -250,8 +310,9 @@ export default function WindowFrame({
       >
         {!isFrameless ? (
           <header
-            ref={isMaximized && allowMaximize ? null : dragRef}
-            className={`xp-titlebar flex h-8 shrink-0 items-center justify-between border-b border-xp-window-frame px-2 shadow-xp-window-title ${isMaximized && !isFrameless && allowMaximize ? 'rounded-none' : 'rounded-t-[2px]'} ${isMaximized && allowMaximize ? 'cursor-default' : 'cursor-move'}`}
+            ref={isPhone || (isMaximized && allowMaximize) ? null : dragRef}
+            onContextMenu={openTitleMenu}
+            className={`xp-titlebar flex h-8 shrink-0 items-center justify-between border-b border-xp-window-frame px-2 shadow-xp-window-title ${isPhone || (isMaximized && !isFrameless && allowMaximize) ? 'rounded-none' : 'rounded-t-[2px]'} ${isPhone || (isMaximized && allowMaximize) ? 'cursor-default' : 'cursor-move'}`}
           >
             <div
               className="flex h-full min-w-0 flex-1 items-center gap-2 truncate pr-3 text-[11px] font-bold"
@@ -292,7 +353,9 @@ export default function WindowFrame({
           <div
             className={
               isFrameless
-                ? 'max-h-[85svh] overflow-visible p-0'
+                ? isPhone
+                  ? 'flex min-h-0 flex-1 flex-col overflow-auto p-0'
+                  : 'max-h-[85svh] overflow-visible p-0'
                 : shell === 'word' ||
                     shell === 'excel' ||
                     shell === 'ppt' ||
@@ -336,6 +399,22 @@ export default function WindowFrame({
               : null}
           </div>
         </>
+        {titleMenu
+          ? createPortal(
+              <WindowTitleContextMenu
+                x={titleMenu.x}
+                y={titleMenu.y}
+                isMaximized={isMaximized}
+                allowMaximize={allowMaximize && !isFrameless}
+                allowMinimize={allowMinimize}
+                onDismiss={() => setTitleMenu(null)}
+                onMinimize={handleMinimize}
+                onToggleMaximize={handleToggleMaximize}
+                onClose={handleClose}
+              />,
+              document.body,
+            )
+          : null}
       </section>
     </FramelessWindowContext.Provider>
   )

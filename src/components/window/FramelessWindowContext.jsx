@@ -6,8 +6,9 @@ import { createContext, useContext } from 'react'
  *
  * @type {import('react').Context<{
  *   attachDragRef: import('react').RefCallback<Element> | null
- *   onMinimize: () => void
+ *   onMinimize: (() => void) | null
  *   onClose: () => void
+ *   onTitleContextMenu: (event: MouseEvent) => void
  * } | null>}
  */
 export const FramelessWindowContext = createContext(null)
