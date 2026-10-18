@@ -322,7 +322,7 @@ architecture, Explorer task panes, dialog tabs, the beige client area, the 3D be
 buttons — all genuinely there. What breaks the illusion clusters into six things, and
 four of them are under an hour each.
 
-## Status — A1–A4 shipped
+## Status — A1–A6 shipped
 
 | Item | What changed | Verified |
 |---|---|---|
@@ -338,6 +338,38 @@ and Linux Chrome, and Firefox via `scrollbar-color`, get the full treatment. Ver
 working in isolation; the macOS gap is a browser limit, not a CSS bug.
 
 `npx eslint` on the touched files: 0 errors · `vitest run`: 25/25 pass.
+### A5–A6 (second pass)
+
+| Item | What changed | Verified |
+|---|---|---|
+| **A5** self-hosted Tahoma | Wine Tahoma 400/700 shipped as `XP Tahoma` (woff2, 57 + 56 kB) with an LGPL notice in `src/assets/fonts/NOTICE.txt`; `font-xp` now leads with it; the root `letter-spacing: .18px` is gone; the shell switched to `subpixel-antialiased`. | `document.fonts` reports both faces `loaded`; build emits the two woff2 files and `@font-face` survives minification. |
+| **A6** one menu skin | `.xp-menu` / `.xp-menu-item` / `.xp-menu-gutter` / `.xp-menu-sep` shared by desktop context menu, icon menu, window system menu and Start menu: white popups, 1px black edge, 11px Tahoma rows, `#316ac5` hover, grey disabled, icon gutters, grooved separators. The permanently-yellow "Refresh" is gone; "Display settings" + "Personalize" collapsed into XP's "Properties". | Context/Start/title menus at 1x and 2x. |
+
+**Fixes applied on review of that pass:**
+
+- `.xp-menubar` had been turned into a *popup* (white, 1px black, `margin: 2px`) even
+  though it is the strip **inside** a window. Restored to the beige XP strip with the
+  white top highlight and dark bottom groove, keeping the new 11px Tahoma + blue hover.
+  Only `shell: 'default'` apps render it today (Side_Projects.ppt), so the damage was
+  hidden on most routes.
+- The Start menu's left column lost its vertical rhythm once rows became 22px: it grew
+  a ~120px white void above "All Programs". Column is now `flex flex-col` with
+  `mt-auto` on All Programs, so the row sits on the footer edge like XP.
+- Start button had `tracking-wide` (0.275px letter-spacing) fighting the new font —
+  removed.
+- Start menu footer used 🔒 / ⏻ emoji, which render as coloured 2024 clip-art on every
+  platform. Replaced with flat monochrome inline SVG glyphs.
+
+**Cost of A5:** +113 kB of fonts on first load (both weights are used — captions,
+Start menu, bold rows). Subsetting to Latin-1 with `pyftsubset` would take each file to
+~25 kB; worth doing together with the image work in Part I.
+
+**Found while reviewing (not fixed — needs a content decision):**
+`src/registry/apps.js` wires `side_project` (`Side_Projects.ppt - Microsoft PowerPoint`)
+to `BiodataWindowContent`. Clicking the desktop icon opens a PowerPoint-titled window
+showing "Replace this content with your biodata / CV." — the correct deck content
+doesn't exist yet.
+
 
 
 ## Fidelity scorecard

@@ -5,6 +5,7 @@ export default {
     extend: {
       fontFamily: {
         xp: [
+          '"XP Tahoma"',
           'Tahoma',
           '"MS Sans Serif"',
           'ui-sans-serif',

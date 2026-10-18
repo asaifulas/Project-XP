@@ -71,7 +71,7 @@ export default function AppLayout({ children }) {
     event.preventDefault()
     closeIconContextMenu()
     const menuWidth = 220
-    const menuHeight = 120
+    const menuHeight = 340
     const nextX = Math.max(0, Math.min(event.clientX, window.innerWidth - menuWidth))
     const nextY = Math.max(0, Math.min(event.clientY, window.innerHeight - menuHeight))
 
@@ -138,7 +138,7 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div className="flex h-svh flex-col overflow-hidden bg-xp-desktop font-xp text-xp-panel antialiased">
+    <div className="flex h-svh flex-col overflow-hidden bg-xp-desktop font-xp text-xp-panel subpixel-antialiased">
       <div
         className="relative flex-1 overflow-hidden bg-[radial-gradient(ellipse_120%_80%_at_50%_20%,theme(colors.xp.desktop-glow),theme(colors.xp.desktop)_55%,theme(colors.xp.desktop-edge)_100%)]"
         onContextMenu={handleDesktopContextMenu}
@@ -205,101 +205,69 @@ export default function AppLayout({ children }) {
 
         {contextMenu.open ? (
           <div
-            className="absolute z-40 min-w-56 border border-zinc-600 bg-white py-1 text-[13px] leading-[1.2] text-black shadow-[2px_2px_8px_rgba(0,0,0,0.2)]"
+            className="xp-menu absolute z-40 min-w-56"
             style={{ left: contextMenu.x, top: contextMenu.y }}
+            role="menu"
           >
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              <span>View</span>
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span className="flex-1">View</span>
               <span aria-hidden>›</span>
             </button>
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              <span>Sort by</span>
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span className="flex-1">Sort by</span>
               <span aria-hidden>›</span>
             </button>
-            <button
-              type="button"
-              onClick={handleRefreshDesktop}
-              className="block w-full bg-[#f9f000] px-3 py-1 text-left"
-            >
-              Refresh
+            <button type="button" onClick={handleRefreshDesktop} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span>Refresh</span>
             </button>
-            <div className="my-1 border-t border-zinc-300" />
-            <button
-              type="button"
-              disabled
-              className="block w-full cursor-not-allowed px-3 py-1 text-left text-zinc-400"
-            >
-              Paste
+            <div className="xp-menu-sep" role="separator" />
+            <button type="button" disabled className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span>Paste</span>
             </button>
-            <button
-              type="button"
-              disabled
-              className="block w-full cursor-not-allowed px-3 py-1 text-left text-zinc-400"
-            >
-              Paste shortcut
+            <button type="button" disabled className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span>Paste shortcut</span>
             </button>
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              <span>Undo Delete</span>
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span className="flex-1">Undo Delete</span>
               <span>Ctrl+Z</span>
             </button>
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="flex w-full items-center gap-2 px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              <span className="inline-block h-3.5 w-3.5 rounded-sm bg-gradient-to-br from-cyan-400 to-blue-600" />
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden>
+                <span className="inline-block h-3.5 w-3.5 rounded-sm bg-gradient-to-br from-cyan-400 to-blue-600" />
+              </span>
               <span>Git GUI Here</span>
             </button>
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="flex w-full items-center gap-2 px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              <span className="inline-block h-3.5 w-3.5 rounded-sm bg-gradient-to-br from-cyan-400 to-blue-600" />
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden>
+                <span className="inline-block h-3.5 w-3.5 rounded-sm bg-gradient-to-br from-cyan-400 to-blue-600" />
+              </span>
               <span>Git Bash Here</span>
             </button>
-            <div className="my-1 border-t border-zinc-300" />
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="block w-full px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              Intel Graphics Settings
+            <div className="xp-menu-sep" role="separator" />
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span>Intel Graphics Settings</span>
             </button>
-            <button
-              type="button"
-              onClick={closeContextMenu}
-              className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              <span>New</span>
+            <button type="button" onClick={closeContextMenu} className="xp-menu-item" role="menuitem">
+              <span className="xp-menu-gutter" aria-hidden />
+              <span className="flex-1">New</span>
               <span aria-hidden>›</span>
             </button>
-            <div className="my-1 border-t border-zinc-300" />
+            <div className="xp-menu-sep" role="separator" />
             <button
               type="button"
               onClick={handleOpenWallpaperSettings}
-              className="block w-full px-3 py-1 text-left hover:bg-[#eaf3ff]"
+              className="xp-menu-item"
+              role="menuitem"
             >
-              Display settings
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenWallpaperSettings}
-              className="block w-full px-3 py-1 text-left hover:bg-[#eaf3ff]"
-            >
-              Personalize
+              <span className="xp-menu-gutter" aria-hidden />
+              <span>Properties</span>
             </button>
           </div>
         ) : null}

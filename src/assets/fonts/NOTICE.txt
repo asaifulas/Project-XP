@@ -1,0 +1,17 @@
+Wine Tahoma and Wine Tahoma Bold
+
+Copyright (c) 2004 Larry Snyder.
+Based on Bitstream Vera Sans, Copyright (c) 2003 Bitstream, Inc.
+Renamed in accordance with the Bitstream Vera license.
+Please do not contact Bitstream about this font.
+
+Licensed under the GNU Lesser General Public License, version 2.1 or later:
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+Source (SplineFontDB), Wine project:
+https://github.com/wine-mirror/wine/blob/master/fonts/tahoma.sfd
+https://github.com/wine-mirror/wine/blob/master/fonts/tahomabd.sfd
+
+tahoma.woff2 and tahomabd.woff2 are those Wine TrueType fonts, compressed
+for the web. They are metric-compatible with Tahoma. They are not
+Microsoft Tahoma.

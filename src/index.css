@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Wine Tahoma (LGPL-2.1), metric-compatible with Microsoft Tahoma.
+ * Self-hosted so chrome metrics do not depend on Office being installed.
+ * See src/assets/fonts/NOTICE.txt.
+ */
+@font-face {
+  font-family: "XP Tahoma";
+  src: url("./assets/fonts/tahoma.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "XP Tahoma";
+  src: url("./assets/fonts/tahomabd.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 
 /*
  * XP scrollbars. macOS hands you 8px overlay scrollbars that fade away, which
@@ -101,7 +122,6 @@
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -233,8 +253,10 @@ code {
   }
 
   .xp-start-menu {
-    border: 1px solid #0b4bb0;
-    background: #f5f6f8;
+    border: 1px solid #000;
+    border-radius: 2px 2px 0 0;
+    background: #fff;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
     box-shadow: 0 -6px 26px rgba(0, 0, 0, 0.55);
   }
 
@@ -254,12 +276,8 @@ code {
   }
 
   .xp-start-item {
-    color: #0b0b0b;
-  }
-
-  .xp-start-item:hover {
-    background: #316ac5;
-    color: #ffffff;
+    color: #000;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
   }
 
   .xp-start-footer {
@@ -383,28 +401,92 @@ code {
     filter: saturate(0.55) brightness(0.97);
   }
 
-  .xp-menubar {
-    height: 26px;
+  /*
+   * One menu skin. Popup menus are white with a 1px black edge.
+   * Start rows and window menu-bar items use the same type, gutter,
+   * groove, hover, and disabled color.
+   */
+  .xp-menu {
+    background: #fff;
+    border: 1px solid #000;
+    border-radius: 2px;
+    padding: 2px 0;
+    color: #000;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.28);
+  }
+
+  .xp-menu-item {
     display: flex;
+    width: 100%;
     align-items: center;
     gap: 6px;
-    padding: 0 6px;
-    background: linear-gradient(180deg, #fdfcf4 0%, #ece9d8 55%, #e2dfcf 100%);
-    border-top: 1px solid rgba(255, 255, 255, 0.7);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-    color: #0b0b0b;
-    font-size: 11px;
+    min-height: 18px;
+    padding: 2px 18px 2px 2px;
+    border: 0;
+    background: transparent;
+    color: #000;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+    text-align: left;
+    cursor: default;
   }
 
-  .xp-menubar button {
-    border-radius: 2px;
-    padding: 1px 6px;
-    line-height: 1.1;
-  }
-
+  .xp-menu-item:hover:not(:disabled),
+  .xp-start-item:hover,
   .xp-menubar button:hover {
     background: #316ac5;
     color: #fff;
+  }
+
+  .xp-menu-item:disabled {
+    color: #9a9a9a;
+  }
+
+  .xp-menu-gutter {
+    display: inline-flex;
+    width: 20px;
+    height: 16px;
+    flex: 0 0 20px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .xp-menu-sep {
+    height: 0;
+    margin: 3px 2px;
+    border: 0;
+    border-top: 1px solid #808080;
+    border-bottom: 1px solid #fff;
+  }
+
+  /*
+   * The menu BAR inside a window is not a popup: it is a beige strip that spans
+   * the client width, with a white top highlight and a dark bottom groove. The
+   * white/black `.xp-menu` chrome belongs to `.xp-menu` only — applying it here
+   * made the strip look like a floating box inside the window.
+   */
+  .xp-menubar {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 2px;
+    background: linear-gradient(180deg, #fdfcf4 0%, #ece9d8 55%, #e2dfcf 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.28);
+    color: #000;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+  }
+
+  .xp-menubar button {
+    border: 0;
+    border-radius: 2px;
+    padding: 1px 6px 1px 2px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.25;
+    cursor: default;
   }
 
   .xp-client {

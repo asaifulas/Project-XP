@@ -1,7 +1,3 @@
-const MENU_ITEM =
-  'block w-full px-4 py-[3px] text-left text-[11px] leading-tight text-black hover:bg-[#316ac5] hover:text-white disabled:cursor-default disabled:text-zinc-400 disabled:hover:bg-transparent disabled:hover:text-zinc-400'
-const MENU_SEP = 'my-[2px] border-t border-[#aca899]'
-
 /**
  * XP title-bar system menu. Right-click the top bar to close (and minimize / maximize).
  *
@@ -30,7 +26,7 @@ export default function WindowTitleContextMenu({
 }) {
   return (
     <div
-      className="fixed z-[80] min-w-[148px] border border-[#aca899] bg-white py-[2px] shadow-[2px_2px_4px_rgba(0,0,0,0.25)]"
+      className="xp-menu fixed z-[80] min-w-[148px]"
       style={{ left: x, top: y }}
       role="menu"
       aria-label="Window"
@@ -42,38 +38,41 @@ export default function WindowTitleContextMenu({
       <button
         type="button"
         role="menuitem"
-        className={MENU_ITEM}
+        className="xp-menu-item"
         disabled={!allowMinimize}
         onClick={() => {
           onDismiss()
           onMinimize()
         }}
       >
-        Minimize
+        <span className="xp-menu-gutter" aria-hidden />
+        <span>Minimize</span>
       </button>
       <button
         type="button"
         role="menuitem"
-        className={MENU_ITEM}
+        className="xp-menu-item"
         disabled={!allowMaximize}
         onClick={() => {
           onDismiss()
           onToggleMaximize()
         }}
       >
-        {isMaximized ? 'Restore' : 'Maximize'}
+        <span className="xp-menu-gutter" aria-hidden />
+        <span>{isMaximized ? 'Restore' : 'Maximize'}</span>
       </button>
-      <div className={MENU_SEP} role="separator" />
+      <div className="xp-menu-sep" role="separator" />
       <button
         type="button"
         role="menuitem"
-        className={MENU_ITEM}
+        className="xp-menu-item"
         onClick={() => {
           onDismiss()
           onClose()
         }}
       >
-        Close
+        <span className="xp-menu-gutter" aria-hidden />
+        <span>Close</span>
       </button>
     </div>
   )

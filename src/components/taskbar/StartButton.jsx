@@ -5,7 +5,7 @@ export default function StartButton({ open, onClick }) {
     <button
       type="button"
       className={[
-        'xp-start-button inline-flex cursor-default select-none items-center gap-1 px-2.5 pl-1.5 font-xp text-[11px] font-bold lowercase tracking-wide',
+        'xp-start-button inline-flex cursor-default select-none items-center gap-1 px-2.5 pl-1.5 font-xp text-[11px] font-bold lowercase',
         'hover:brightness-105',
       ]
         .filter(Boolean)
