@@ -3,6 +3,75 @@
 @tailwind utilities;
 
 
+/*
+ * XP scrollbars. macOS hands you 8px overlay scrollbars that fade away, which
+ * instantly reads as "web page". XP's are 17px: a sunken track, a beveled
+ * blue-grey thumb, and beige arrow buttons with a black triangle.
+ *
+ * Kept in `base` on purpose so the `.no-scrollbar` utility still wins.
+ */
+@layer base {
+  * {
+    scrollbar-color: #b3c4e4 #f1f1f1;
+  }
+
+  ::-webkit-scrollbar {
+    width: 17px;
+    height: 17px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border: 1px solid #d6d2c2;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #d3ddef 0%, #b3c4e4 50%, #c5d2ea 100%);
+    border: 1px solid #8a9bb8;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #dde7f8 0%, #bfd0ee 50%, #cfdcf3 100%);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: #a8bcdd;
+  }
+
+  ::-webkit-scrollbar-button:single-button {
+    display: block;
+    height: 17px;
+    width: 17px;
+    background-color: #ece9d8;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 7px 7px;
+    border: 1px solid #a8a494;
+  }
+
+  ::-webkit-scrollbar-button:single-button:vertical:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7'%3E%3Cpath d='M3.5 0 7 6H0z' fill='%23222'/%3E%3C/svg%3E");
+  }
+
+  ::-webkit-scrollbar-button:single-button:vertical:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7'%3E%3Cpath d='M3.5 7 0 1h7z' fill='%23222'/%3E%3C/svg%3E");
+  }
+
+  ::-webkit-scrollbar-button:single-button:horizontal:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7'%3E%3Cpath d='M0 3.5 6 0v7z' fill='%23222'/%3E%3C/svg%3E");
+  }
+
+  ::-webkit-scrollbar-button:single-button:horizontal:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7'%3E%3Cpath d='M7 3.5 1 0v7z' fill='%23222'/%3E%3C/svg%3E");
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: #ece9d8;
+  }
+}
+
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -249,14 +318,18 @@ code {
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
+  /*
+   * Luna window frame. XP defines a window with a 3px blue frame and no drop
+   * shadow at all — the shadow that used to live here was Vista/7's Aero, and it
+   * was the loudest anachronism in the shell. Only the titlebar corners round
+   * (8px outer, 5px inner once the 3px frame is subtracted); the bottom of the
+   * frame stays square.
+   */
   .xp-window {
-    border: 1px solid #2457c5;
-    border-radius: 3px;
+    border: 3px solid #0831d9;
+    border-radius: 8px 8px 0 0;
     background: #f6f6f6;
-    box-shadow:
-      0 12px 30px rgba(0, 0, 0, 0.45),
-      inset 0 1px 0 #b9d4ff,
-      inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    box-shadow: none;
   }
 
   .xp-titlebar {
@@ -270,6 +343,44 @@ code {
       inset 0 1px 0 rgba(255, 255, 255, 0.25),
       inset 0 -1px 0 rgba(0, 0, 0, 0.35);
     color: #ffffff;
+  }
+
+  /* XP caption text: 13px Tahoma bold with a 1px dark shadow, not a modern header. */
+  .xp-title-text {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  /*
+   * Inactive window: XP desaturates the titlebar to a grey-blue and dims the
+   * caption, while the client area stays fully legible. Before this the only
+   * signal was `opacity: .98`, so two stacked windows both looked active.
+   */
+  .xp-window[data-active='false'] {
+    border-color: #6d84b4;
+  }
+
+  .xp-window[data-active='false'] .xp-titlebar {
+    background: linear-gradient(
+      180deg,
+      #94b1e8 0%,
+      #7ba2e7 48%,
+      #6d8fd4 100%
+    );
+    color: #d6e3fa;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+  }
+
+  .xp-window[data-active='false'] .xp-title-text {
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .xp-window[data-active='false'] .xp-titlebar button {
+    filter: saturate(0.55) brightness(0.97);
   }
 
   .xp-menubar {

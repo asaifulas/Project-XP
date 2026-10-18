@@ -322,6 +322,24 @@ architecture, Explorer task panes, dialog tabs, the beige client area, the 3D be
 buttons — all genuinely there. What breaks the illusion clusters into six things, and
 four of them are under an hour each.
 
+## Status — A1–A4 shipped
+
+| Item | What changed | Verified |
+|---|---|---|
+| **A1** frame + shadow | `.xp-window`: `border: 3px solid #0831d9`, `border-radius: 8px 8px 0 0`, drop shadow deleted; titlebar inner radius 5px. Maximized/phone windows drop side/top/bottom frame. | Computed: `3px rgb(8,49,217)`, `box-shadow: none`; 3px edge visible on all sides in the screenshot. |
+| **A1b** clipped frame | Found while verifying: a restored 1416px frame at `x: 28` overflowed a 1440 viewport by 4px, so the right border and scrollbar were cut off. Default position is now clamped against the frame width the window will use. | Window right edge `1428 < 1440`; scrollbar fully inside the frame. |
+| **A2** inactive window | `data-active` on the frame; inactive titlebar `#94b1e8 → #6d8fd4`, caption `#d6e3fa`, buttons desaturated; removed the old `opacity: .98` hack. | Stacked screenshot: grey-blue inactive bar next to a saturated active one. |
+| **A3** caption type | `.xp-title-text`: 13px, weight 700, `text-shadow: 1px 1px 0 rgba(0,0,0,.45)` (lighter shadow when inactive). | Computed 13px / 700; visible shadow in the crop. |
+| **A4** scrollbars | 17px XP scrollbars in `@layer base`: sunken track, beveled blue-grey thumb, beige arrow buttons drawn from inline SVGs; `scrollbar-color` for Firefox. `.no-scrollbar` still wins (utility layer). | Styled thumb + 17px gutter inside `.word-office-chrome-scroll`. |
+
+**A4 caveat:** Chrome on macOS forces *overlay* scrollbars, so it paints the track and
+thumb but silently drops `::-webkit-scrollbar-button` — no arrow buttons there. Windows
+and Linux Chrome, and Firefox via `scrollbar-color`, get the full treatment. Verified
+working in isolation; the macOS gap is a browser limit, not a CSS bug.
+
+`npx eslint` on the touched files: 0 errors · `vitest run`: 25/25 pass.
+
+
 ## Fidelity scorecard
 
 | Region | Now | Real XP | Gap |

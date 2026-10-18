@@ -89,13 +89,23 @@ export default function WindowFrame({
   const pid = programId ?? title
 
   const storedPosition = useShellStore((s) => s.windowFramePositions[pid])
-  const defaultPosition = useMemo(
-    () => ({
-      x: 28 + stackIndex * 28,
-      y: 24 + stackIndex * 28,
-    }),
-    [stackIndex],
-  )
+  /*
+   * Cascade a new window down-right, but never past the viewport. The restored
+   * frame is `min(1440px, 100% - 24px)` wide, so a fixed 28px x put the right
+   * frame edge (and the 3px Luna border, and any scrollbar) off-screen at
+   * 1440-wide desktops. Clamp against the width this window will actually use.
+   */
+  const defaultPosition = useMemo(() => {
+    const offset = stackIndex * 28
+    if (typeof window === 'undefined') return { x: 28 + offset, y: 24 + offset }
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const frameW = Math.min(shell === 'folder' ? 1024 : 1440, vw - 24)
+    return {
+      x: Math.max(8, Math.min(28 + offset, vw - frameW - 12)),
+      y: Math.max(8, Math.min(24 + offset, vh - 120)),
+    }
+  }, [stackIndex, shell])
 
   const baseX =
     storedPosition && Number.isFinite(storedPosition.x)
@@ -247,10 +257,10 @@ export default function WindowFrame({
 
   /** Matches `.xp-taskbar { height: 34px }` in `index.css` — fill viewport above taskbar. */
   const maximizedXpClasses =
-    'fixed left-0 right-0 top-0 z-[45] m-0 flex h-[calc(100svh-34px)] max-h-[calc(100svh-34px)] w-full max-w-none flex-col rounded-none border-x-0 border-t-0 shadow-[0_1px_0_rgba(0,0,0,0.25)]'
+    'fixed left-0 right-0 top-0 z-[45] m-0 flex h-[calc(100svh-34px)] max-h-[calc(100svh-34px)] w-full max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0 shadow-[0_1px_0_rgba(0,0,0,0.25)]'
   /** Phone: every open window fills the screen above the taskbar, ignoring desktop frame size. */
   const phoneFillClasses =
-    'fixed inset-x-0 top-0 m-0 flex !h-[calc(100svh-34px)] !max-h-[calc(100svh-34px)] !w-full !max-w-none flex-col rounded-none border-x-0 border-t-0'
+    'fixed inset-x-0 top-0 m-0 flex !h-[calc(100svh-34px)] !max-h-[calc(100svh-34px)] !w-full !max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0'
   const fillsViewport = isPhone || (isMaximized && !isFrameless && allowMaximize)
 
   const hasExplicitWidthClass =
@@ -282,7 +292,6 @@ export default function WindowFrame({
             : 'xp-window',
           isPhone ? phoneFillClasses : isMaximized && !isFrameless && allowMaximize ? maximizedXpClasses : '',
           isPhone || !isMaximized || isFrameless || !allowMaximize ? (isActive ? 'z-50' : 'z-[38]') : '',
-          !isActive ? 'opacity-[0.98]' : '',
           !isPhone && isMaximized && isFrameless ? 'inset-2' : '',
           !fillsViewport || isFrameless
             ? ['left-0 top-0', standardRestoredFrameClasses].filter(Boolean).join(' ')
@@ -300,6 +309,7 @@ export default function WindowFrame({
         }
         role="dialog"
         aria-label={title}
+        data-active={isActive ? 'true' : 'false'}
         onMouseDown={() => {
           if (!isActive) {
             onActivate?.()
@@ -312,10 +322,10 @@ export default function WindowFrame({
           <header
             ref={isPhone || (isMaximized && allowMaximize) ? null : dragRef}
             onContextMenu={openTitleMenu}
-            className={`xp-titlebar flex h-8 shrink-0 items-center justify-between border-b border-xp-window-frame px-2 shadow-xp-window-title ${isPhone || (isMaximized && !isFrameless && allowMaximize) ? 'rounded-none' : 'rounded-t-[2px]'} ${isPhone || (isMaximized && allowMaximize) ? 'cursor-default' : 'cursor-move'}`}
+            className={`xp-titlebar flex h-8 shrink-0 items-center justify-between border-b border-xp-window-frame px-2 shadow-xp-window-title ${isPhone || (isMaximized && !isFrameless && allowMaximize) ? 'rounded-none' : 'rounded-t-[5px]'} ${isPhone || (isMaximized && allowMaximize) ? 'cursor-default' : 'cursor-move'}`}
           >
             <div
-              className="flex h-full min-w-0 flex-1 items-center gap-2 truncate pr-3 text-[11px] font-bold"
+              className="xp-title-text flex h-full min-w-0 flex-1 items-center gap-2 truncate pr-3"
               onDoubleClick={(e) => {
                 e.stopPropagation()
                 handleToggleMaximize()
