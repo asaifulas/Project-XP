@@ -5,6 +5,12 @@
         "command": "node .cursor/hooks/session-start.js",
         "event": "sessionStart",
         "description": "Load previous context and detect environment"
+      },
+      {
+        "command": ".cursor/hooks/trail-session-start.sh",
+        "event": "sessionStart",
+        "description": "Refresh the trail graph if stale and inject the context-graph orientation",
+        "timeout": 20
       }
     ],
     "sessionEnd": [
@@ -12,6 +18,9 @@
         "command": "node .cursor/hooks/session-end.js",
         "event": "sessionEnd",
         "description": "Persist session state and evaluate patterns"
+      },
+      {
+        "command": "node .cursor/hooks/trail-hooks.cjs cursor-session-end"
       }
     ],
     "beforeShellExecution": [
@@ -52,6 +61,9 @@
         "command": "node .cursor/hooks/after-mcp-execution.js",
         "event": "afterMCPExecution",
         "description": "MCP result logging"
+      },
+      {
+        "command": "node .cursor/hooks/trail-hooks.cjs cursor-mcp"
       }
     ],
     "beforeReadFile": [
@@ -109,6 +121,13 @@
         "event": "stop",
         "description": "Console.log audit on all modified files"
       }
+    ],
+    "postToolUse": [
+      {
+        "matcher": "Read|Grep|Glob|Search|Shell",
+        "command": "node .cursor/hooks/trail-hooks.cjs cursor-post-tool"
+      }
     ]
-  }
+  },
+  "version": 1
 }

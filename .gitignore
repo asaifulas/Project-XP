@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# trail's local graph cache is regenerable, so it stays out of git. Ignored by
+# .trail/.gitignore (which trail owns), so teammates can still commit
+# .trail/learnings/ and .trail/README.md.
+
