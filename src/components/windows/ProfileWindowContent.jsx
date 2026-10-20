@@ -1,4 +1,4 @@
-import profileImage from '../../assets/mine/profile.png'
+import profileImage from '../../assets/mine/profile.webp'
 import WordA4Page from '../window/WordA4Page'
 
 const STRENGTHS = [

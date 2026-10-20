@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import profileImage from '../../assets/mine/profile.png'
+import profileImage from '../../assets/mine/profile.webp'
 import { getAppById, getDesktopApps } from '../../registry/apps'
 import { useShellStore } from '../../stores/useShellStore'
 import { openExternalUrl } from '../../utils/openExternalUrl'
