@@ -27,10 +27,10 @@ function normalizeUrl(raw) {
  * @param {{ initialUrl?: string, onCaptionChange?: (urlDisplay: string) => void }} props
  */
 export default function InternetExplorerApp({
-  initialUrl = 'https://penyulab.my',
+  initialUrl = 'https://penyulabs.com',
   onCaptionChange,
 }) {
-  const start = useMemo(() => normalizeUrl(initialUrl) ?? 'https://penyulab.my', [initialUrl])
+  const start = useMemo(() => normalizeUrl(initialUrl) ?? 'https://penyulabs.com', [initialUrl])
 
   const [{ stack: history, idx: histIdx }, setNav] = useState(() => ({
     stack: [start],

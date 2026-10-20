@@ -153,11 +153,11 @@ export const APPS = [
       showMenuBar: false,
       className: '',
       shell: 'ie',
-      initialUrl: 'https://penyulab.my',
+      initialUrl: 'https://penyulabs.com',
     },
     renderStack: ({ app }) =>
       createElement(InternetExplorerApp, {
-        initialUrl: app?.window?.initialUrl ?? 'https://penyulab.my',
+        initialUrl: app?.window?.initialUrl ?? 'https://penyulabs.com',
       }),
   },
   {
