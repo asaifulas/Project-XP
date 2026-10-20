@@ -37,7 +37,7 @@ export default function TaskbarPrograms() {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1">
+    <div className="flex min-w-0 flex-1 items-center gap-[2px] overflow-x-auto overflow-y-hidden px-1">
       {programs.map((p) => (
         <TaskbarProgramButton
           key={p.id}

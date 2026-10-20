@@ -18,15 +18,12 @@ function Meter({ label, value, hint }) {
   const pct = Math.round(clamp01(value) * 100)
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-[11px] text-white/85">
+      <div className="mb-1 flex items-center justify-between text-[11px] text-black">
         <span className="font-semibold">{label}</span>
         <span className="tabular-nums">{hint ?? `${pct}%`}</span>
       </div>
-      <div className="h-2.5 rounded border border-white/15 bg-black/25">
-        <div
-          className="h-full rounded bg-gradient-to-r from-[#55ffb2] to-[#2ea6ff]"
-          style={{ width: `${pct}%` }}
-        />
+      <div className="h-3 border border-[#808080] bg-[#ece9d8] shadow-[inset_1px_1px_0_#fff]">
+        <div className="h-full bg-[#316ac5]" style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
@@ -90,12 +87,12 @@ export default function SystemMetersWidget() {
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] font-bold text-white/90">Meters</div>
-        <div className="text-[10px] text-white/60">browser estimates</div>
+      <div className="xp-gadget-title flex items-center justify-between">
+        <span>Meters</span>
+        <span className="font-normal">browser estimates</span>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 p-2">
         <Meter
           label="RAM"
           value={ramRatio}

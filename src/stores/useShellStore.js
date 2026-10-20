@@ -137,6 +137,15 @@ export const useShellStore = create((set) => ({
         }
       }),
     })),
+  /** Quick Launch ▸ Show Desktop: minimize every open window. */
+  minimizeAllPrograms: () =>
+    set((state) => ({
+      runningPrograms: state.runningPrograms.map((p) => ({
+        ...p,
+        minimized: true,
+        active: false,
+      })),
+    })),
 
   setWindowFramePosition: (id, pos) =>
     set((s) => ({

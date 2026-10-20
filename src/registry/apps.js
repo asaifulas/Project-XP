@@ -153,11 +153,11 @@ export const APPS = [
       showMenuBar: false,
       className: '',
       shell: 'ie',
-      initialUrl: 'https://app.inerva.my',
+      initialUrl: 'https://penyulab.my',
     },
     renderStack: ({ app }) =>
       createElement(InternetExplorerApp, {
-        initialUrl: app?.window?.initialUrl ?? 'https://app.inerva.my',
+        initialUrl: app?.window?.initialUrl ?? 'https://penyulab.my',
       }),
   },
   {

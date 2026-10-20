@@ -197,7 +197,7 @@ export default function CertificateSheet() {
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 bg-[#808080]">
+    <div className="excel-sheet flex min-h-0 min-w-0 flex-1 bg-[#808080]">
       <aside className="flex w-[200px] shrink-0 flex-col gap-2 overflow-hidden border-r border-black/30 bg-[#ece9d8] p-2">
         <div className="text-[11px] font-bold">Merge fields</div>
         <div className="min-h-0 flex-1 overflow-auto">

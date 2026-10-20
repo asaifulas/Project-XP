@@ -310,7 +310,7 @@ export default function ExcelOfficeChrome() {
             </div>
 
             <div
-              className="absolute left-0 top-0"
+              className="excel-sheet absolute left-0 top-0"
               style={{ paddingLeft: rowHeaderW, paddingTop: colHeaderH }}
               role="grid"
               aria-label="Spreadsheet grid"

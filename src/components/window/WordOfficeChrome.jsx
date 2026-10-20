@@ -8,7 +8,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
  * Zoom is capped at `DOC_ZOOM_MAX` but shrinks so a full **210mm** page width always fits
  * the document viewport (no horizontal clipping).
  */
-const DOC_ZOOM_MAX = 1.38
+const DOC_ZOOM_MAX = 1
 
 export default function WordOfficeChrome({ children }) {
   const docViewportRef = useRef(null)

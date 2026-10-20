@@ -1,3 +1,5 @@
+import XpIconImage from '../desktop/XpIconImage'
+
 export default function TaskbarProgramButton({
   title,
   iconSrc,
@@ -9,7 +11,7 @@ export default function TaskbarProgramButton({
     <button
       type="button"
       className={[
-        'xp-taskbtn inline-flex max-w-[220px] min-w-0 shrink-0 cursor-default select-none items-center gap-1.5 px-2.5 pl-2 font-xp text-[11px] hover:brightness-105',
+        'xp-taskbtn inline-flex max-w-[160px] min-w-0 shrink-0 cursor-default select-none items-center gap-1 px-2 font-xp text-[11px]',
         active ? 'xp-taskbtn-active' : '',
         minimized ? 'opacity-70' : '',
       ].join(' ')}
@@ -17,12 +19,7 @@ export default function TaskbarProgramButton({
       title={title}
     >
       {iconSrc ? (
-        <img
-          src={iconSrc}
-          alt=""
-          className="h-4 w-4 shrink-0 select-none object-contain"
-          draggable="false"
-        />
+        <XpIconImage src={iconSrc} className="h-4 w-4 shrink-0 select-none object-contain" />
       ) : (
         <span
           className="h-4 w-4 shrink-0 rounded-sm bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"

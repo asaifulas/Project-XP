@@ -255,12 +255,12 @@ export default function WindowFrame({
       }
     : null
 
-  /** Matches `.xp-taskbar { height: 34px }` in `index.css` — fill viewport above taskbar. */
+  /** Matches `.xp-taskbar { height: 30px }` in `index.css` — fill viewport above taskbar. */
   const maximizedXpClasses =
-    'fixed left-0 right-0 top-0 z-[45] m-0 flex h-[calc(100svh-34px)] max-h-[calc(100svh-34px)] w-full max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0 shadow-[0_1px_0_rgba(0,0,0,0.25)]'
+    'fixed left-0 right-0 top-0 z-[45] m-0 flex h-[calc(100svh-30px)] max-h-[calc(100svh-30px)] w-full max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0 shadow-[0_1px_0_rgba(0,0,0,0.25)]'
   /** Phone: every open window fills the screen above the taskbar, ignoring desktop frame size. */
   const phoneFillClasses =
-    'fixed inset-x-0 top-0 m-0 flex !h-[calc(100svh-34px)] !max-h-[calc(100svh-34px)] !w-full !max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0'
+    'fixed inset-x-0 top-0 m-0 flex !h-[calc(100svh-30px)] !max-h-[calc(100svh-30px)] !w-full !max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0'
   const fillsViewport = isPhone || (isMaximized && !isFrameless && allowMaximize)
 
   const hasExplicitWidthClass =

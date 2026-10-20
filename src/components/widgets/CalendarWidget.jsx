@@ -41,12 +41,12 @@ export default function CalendarWidget() {
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] font-bold text-white/90">Calendar</div>
+      <div className="xp-gadget-title flex items-center justify-between">
+        <span>Calendar</span>
         <div className="inline-flex items-center gap-1">
           <button
             type="button"
-            className="rounded border border-white/15 bg-white/10 px-2 py-0.5 text-[11px] text-white/90 hover:bg-white/15"
+            className="xp-button px-1.5 py-0 text-black"
             onClick={() =>
               setCursorMonth(
                 (d) => new Date(d.getFullYear(), d.getMonth() - 1, 1),
@@ -58,7 +58,7 @@ export default function CalendarWidget() {
           </button>
           <button
             type="button"
-            className="rounded border border-white/15 bg-white/10 px-2 py-0.5 text-[11px] text-white/90 hover:bg-white/15"
+            className="xp-button px-1.5 py-0 text-black"
             onClick={() =>
               setCursorMonth(
                 (d) => new Date(d.getFullYear(), d.getMonth() + 1, 1),
@@ -71,11 +71,11 @@ export default function CalendarWidget() {
         </div>
       </div>
 
-      <div className="mb-2 text-[11px] text-white/85">{label}</div>
+      <div className="px-2 pt-2 text-[11px]">{label}</div>
 
-      <div className="grid grid-cols-7 gap-1 text-[10px]">
+      <div className="grid grid-cols-7 gap-1 p-2 text-[10px]">
         {weekdays.map((w) => (
-          <div key={w} className="text-center font-semibold text-white/70">
+          <div key={w} className="text-center font-semibold text-black">
             {w}
           </div>
         ))}
@@ -90,10 +90,10 @@ export default function CalendarWidget() {
             <div
               key={d.toISOString()}
               className={[
-                'grid h-6 place-items-center rounded border text-center',
+                'grid h-6 place-items-center border text-center',
                 active
-                  ? 'border-white/40 bg-white/25 text-white'
-                  : 'border-white/10 bg-black/15 text-white/85',
+                  ? 'border-[#0831d9] bg-[#316ac5] text-white'
+                  : 'border-[#b7c4e0] bg-white text-black',
               ].join(' ')}
             >
               {d.getDate()}

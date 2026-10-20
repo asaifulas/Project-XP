@@ -135,25 +135,12 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+/*
+ * Deliberately no `prefers-color-scheme: dark` overrides: this is a 2001 desktop,
+ * not a themed app. The leftover Vite dark tokens flipped `--text-h` to near-white,
+ * which made every document heading (h1/h2 on a white Word page) invisible for
+ * visitors whose OS is in dark mode.
+ */
 
 html,
 body,
@@ -218,22 +205,39 @@ code {
 
 @layer components {
   /* ---------- XP Taskbar + Start menu ---------- */
+  /*
+   * 30px at 96 DPI, flush to the screen edge. Luna's bar is a three-stop blue:
+   * a bright band near the top, the body colour, then a darker foot. The Start
+   * button is full height and only its right edge is rounded, so nothing looks
+   * like a floating pill.
+   */
   .xp-taskbar {
-    height: 34px;
-    background: linear-gradient(180deg, #4d8cf6 0%, #1e63d8 45%, #1555c7 100%);
-    border-top: 1px solid rgba(255, 255, 255, 0.28);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    height: 30px;
+    padding: 0;
+    background: linear-gradient(
+      180deg,
+      #245edb 0%,
+      #3f8cf3 9%,
+      #245edb 18%,
+      #1b52c9 88%,
+      #1941a5 100%
+    );
+    border-top: 1px solid #0831d9;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
 
   .xp-start-button {
-    height: 28px;
-    border-radius: 6px 12px 12px 6px;
-    border: 1px solid rgba(0, 0, 0, 0.55);
-    background: linear-gradient(180deg, #69c33a 0%, #3aa020 55%, #2b7f17 100%);
+    height: 30px;
+    border-radius: 0 12px 12px 0;
+    border: 0;
+    border-right: 1px solid #0e3f10;
+    background: linear-gradient(180deg, #4aa832 0%, #35901f 45%, #237314 100%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.35),
-      0 1px 0 rgba(0, 0, 0, 0.35);
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+      inset -1px 0 0 rgba(255, 255, 255, 0.12);
     color: #ffffff;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
   }
 
   .xp-start-button:active,
@@ -244,11 +248,16 @@ code {
       inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   }
 
+  /* Tray spans the full bar height and reads as a slightly darker, inset strip. */
   .xp-tray {
-    height: 28px;
-    background: linear-gradient(180deg, #5aa0ff 0%, #2a79e6 55%, #1e6ad6 100%);
-    border: 1px solid rgba(0, 0, 0, 0.35);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    height: 30px;
+    border-radius: 0;
+    padding: 0 8px 0 6px;
+    background: linear-gradient(180deg, #1568d8 0%, #0f57c0 55%, #0b4cb0 100%);
+    box-shadow:
+      inset 1px 0 0 rgba(0, 0, 0, 0.35),
+      inset 2px 0 0 rgba(255, 255, 255, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
     color: #ffffff;
   }
 
@@ -285,55 +294,334 @@ code {
     border-top: 1px solid rgba(0, 0, 0, 0.35);
   }
 
+  /*
+   * Start menu rows are bigger than a popup menu's: 24px icons on 34px rows, and
+   * the Internet/E-mail entries carry a second grey line like XP's.
+   */
+  .xp-start-row {
+    min-height: 34px;
+    padding: 3px 18px 3px 4px;
+    gap: 8px;
+  }
+
+  .xp-start-icon {
+    display: inline-flex;
+    width: 26px;
+    flex: 0 0 26px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .xp-start-icon > svg,
+  .xp-start-icon > img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .xp-start-icon .xp-icon-plate {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+
+  .xp-start-icon .xp-icon-plate img {
+    width: 15px;
+    height: 15px;
+  }
+
+  .xp-start-sub {
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
+  .xp-menu-item:hover .xp-start-sub {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* All Programs: one green arrow, pinned to the right end of the row. */
+  .xp-allprograms-row {
+    padding: 3px 6px 3px 10px;
+  }
+
+  .xp-allprograms-arrow {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .xp-allprograms-arrow > svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* All Programs flyout keeps popup rhythm (16px icons, 22px rows). */
+  .flyout-row {
+    min-height: 22px;
+  }
+
+  /* 22px task buttons: a raised blue button at rest, an inset one when active. */
   .xp-taskbtn {
-    height: 28px;
-    border-radius: 3px;
-    border: 1px solid rgba(0, 0, 0, 0.35);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(0, 0, 0, 0.08) 100%);
+    height: 22px;
+    border-radius: 2px;
+    border: 1px solid #0b3f9e;
+    background: linear-gradient(180deg, #4d8ff0 0%, #2f74dc 52%, #1d5cc4 100%);
     color: #ffffff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .xp-taskbtn:hover {
+    filter: brightness(1.06);
   }
 
   .xp-taskbtn-active {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(0, 0, 0, 0.12) 100%);
-    border-color: rgba(0, 0, 0, 0.5);
-  }
-
-  /* ---------- Glass widgets sidebar ---------- */
-  .xp-glass-sidebar {
-    pointer-events: none;
-  }
-
-  .xp-glass-sidebar > * {
-    pointer-events: auto;
-  }
-
-  .xp-glass-panel {
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.12) 0%,
-      rgba(0, 0, 0, 0.14) 100%
-    );
+    background: linear-gradient(180deg, #1a4fae 0%, #2a6ad4 55%, #3a80e8 100%);
+    border-color: #0a357f;
     box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.12),
-      0 1px 2px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16);
-    backdrop-filter: blur(10px);
+      inset 0 1px 2px rgba(0, 0, 0, 0.45),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   }
 
-  /** Sticky notes: visually separated from the rest of the sidebar (undocked). */
-  .xp-glass-sticky-undocked {
+  /* Quick Launch: two small tool buttons between vertical grips. */
+  .xp-quicklaunch {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 2px;
+  }
+
+  .xp-ql-btn {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    padding: 0;
+  }
+
+  .xp-ql-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  }
+
+  .xp-ql-btn img,
+  .xp-ql-btn svg {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Luna's dotted drag grips either side of Quick Launch. */
+  .xp-grip {
+    width: 5px;
+    height: 22px;
+    align-self: center;
+    flex: none;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.2px);
+    background-size: 3px 3px;
+    background-position: 1px 2px;
+  }
+
+  /* ---------- Desktop gadgets (flat, no glass) ---------- */
+  .xp-gadget {
+    border: 3px solid #0831d9;
+    border-radius: 0;
+    background: linear-gradient(180deg, #ffffff 0%, #d6e5ff 100%);
+    color: #000;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+    box-shadow: none;
+  }
+
+  .xp-gadget-title {
+    background: linear-gradient(180deg, #3d8bfd 0%, #0b4bb0 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1.25;
+    padding: 3px 6px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  .xp-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    border-radius: 0;
+    background: #ece9d8;
+    color: #000;
+    padding: 3px 10px;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+    box-shadow: none;
+    cursor: default;
+  }
+
+  .xp-button:hover {
+    background: #f6f4ea;
+  }
+
+  .xp-button:active {
+    border-color: #404040 #fff #fff #404040;
+    background: #ddd9c8;
+  }
+
+  /* Modern marks share one 32px beveled plate so they sit with the XP icons. */
+  .xp-icon-plate {
+    display: inline-grid;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    place-items: center;
+    border: 1px solid #5c584c;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #f7f4ea 0%, #cfc8b4 100%);
+    box-shadow:
+      inset 1px 1px 0 #ffffff,
+      inset -1px -1px 0 #8d8878;
+  }
+
+  .xp-icon-plate img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+
+  .xp-menu-gutter .xp-icon-plate,
+  .xp-taskbtn .xp-icon-plate {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+  }
+
+  .xp-menu-gutter .xp-icon-plate img,
+  .xp-taskbtn .xp-icon-plate img {
+    width: 11px;
+    height: 11px;
+  }
+
+  /* Word 12pt Times on a 794px sheet. Excel cells are 10pt Arial. */
+  .word-page {
+    box-sizing: border-box;
+    width: 794px;
+    max-width: 794px;
+    min-height: 1123px;
+    padding: 2cm;
+    background: #fff;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 16px;
+    line-height: 1.15;
+  }
+
+  .word-page h1,
+  .word-page h2 {
+    font-family: "Times New Roman", Times, serif;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0;
+    color: #000;
+  }
+
+  .word-page h1 {
+    font-size: 21px;
+  }
+
+  .word-page h2 {
+    font-size: 19px;
+  }
+
+  .word-page p,
+  .word-page li {
+    font-size: 16px;
+    line-height: 1.15;
+    letter-spacing: 0;
+  }
+
+  .excel-sheet,
+  .excel-sheet button,
+  .excel-sheet input,
+  .excel-sheet p,
+  .excel-sheet span {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .excel-sheet button,
+  .excel-sheet input,
+  .excel-sheet p {
+    font-size: 13px;
+    line-height: 1.15;
+  }
+
+  .xp-clippy-balloon,
+  .xp-clippy-prompt {
+    background: #ffffe1;
+    border: 1px solid #000;
+    border-radius: 2px;
+    color: #000;
+    font: 11px/1.25 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+    box-shadow: none;
+  }
+
+  .xp-clippy-balloon {
     position: relative;
-    z-index: 2;
-    transform: translateY(-4px);
-    border-radius: 14px;
-    box-shadow:
-      0 3px 12px rgba(0, 0, 0, 0.14),
-      0 1px 3px rgba(0, 0, 0, 0.08),
-      0 0 0 1px rgba(255, 255, 255, 0.12),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    max-width: min(240px, calc(100vw - 1.5rem));
+    padding: 6px 22px 6px 8px;
+  }
+
+  .xp-clippy-prompt {
+    padding: 3px 8px;
+    white-space: nowrap;
+    cursor: default;
+  }
+
+  .xp-clippy-tail {
+    position: absolute;
+    left: 18px;
+    bottom: -11px;
+    width: 0;
+    height: 0;
+    border-right: 8px solid transparent;
+    border-left: 8px solid transparent;
+    border-top: 11px solid #000;
+  }
+
+  .xp-clippy-tail::after {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: -12px;
+    border-right: 7px solid transparent;
+    border-left: 7px solid transparent;
+    border-top: 10px solid #ffffe1;
+  }
+
+  .xp-clippy-link {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 1px 2px;
+    color: #0000ee;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: default;
+  }
+
+  .xp-clippy-link:hover {
+    background: #316ac5;
+    color: #fff;
+    text-decoration: underline;
   }
 
   /*

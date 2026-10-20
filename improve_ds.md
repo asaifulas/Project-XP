@@ -322,7 +322,7 @@ architecture, Explorer task panes, dialog tabs, the beige client area, the 3D be
 buttons — all genuinely there. What breaks the illusion clusters into six things, and
 four of them are under an hour each.
 
-## Status — A1–A6 shipped
+## Status — A1–A10 shipped
 
 | Item | What changed | Verified |
 |---|---|---|
@@ -363,6 +363,57 @@ working in isolation; the macOS gap is a browser limit, not a CSS bug.
 **Cost of A5:** +113 kB of fonts on first load (both weights are used — captions,
 Start menu, bold rows). Subsetting to Latin-1 with `pyftsubset` would take each file to
 ~25 kB; worth doing together with the image work in Part I.
+
+### A7–A10 + taskbar (third pass)
+
+| Item | What changed | Verified |
+|---|---|---|
+| **A7** icon language | `XpIconImage` wraps the six modern marks (GitHub, WhatsApp, LinkedIn, Gmail, CertiMagic, Calculator) in one 32px beveled plate, and the same plate at 16px inside menus and task buttons, so they sit beside the XP 3D icons instead of fighting them. | Desktop at 1440 and 390; task-button and menu icons. |
+| **A8** widgets | Glass gone: `xp-gadget` is a flat 3px-framed panel with a blue title strip, 11px Tahoma, no blur; buttons use the beveled `xp-button`. | Desktop screenshots. |
+| **A9** document type | `word-page` is 794px at 96dpi with Times 16px/1.15 and 2cm margins; `excel-sheet` is Arial 13px. The Word window finally reads as paper, not a landing page. | About/Word window. |
+| **A10** Clippy | Balloon is `#ffffe1` with a 1px black edge and 2px radius; on ≤767px it collapses to a one-line "Need help? Ask Clippy". | Desktop + mobile. |
+
+### Start menu, second pass (matches XP's own screenshot)
+
+XP's Start menu is not a list of 16px rows, and "All Programs" does not replace the
+menu — it opens a **flyout to the right**. Both are now true here:
+
+- Rows are 34px with **24px icons**: the Internet / E-mail entries carry two lines
+  (bold label + grey subtitle: "Internet Explorer", "Gmail"), recents are single-line,
+  the header avatar is 48px in a white frame with a 14px bold username, and the footer
+  buttons are 32px.
+- **All Programs is a flyout**, and it opens **at the single green arrow** on that
+  row (not at the outer edge of the Start menu, as XP's own screenshot shows): one
+  green circle arrow pinned to the right end of the row, no second chevron, and the
+  flyout's left edge is measured from that arrow (`arrow.right - 2px`) with its bottom
+  on the row. 250px wide, 16px icons on 22px rows, `max-h: 70svh`, own scroll. The old
+  in-panel overlay is gone.
+- Footer icons are **coloured** like XP's: a yellow key for Log Off, a red power button
+  for Turn Off Computer.
+- The menu itself is capped at `calc(100svh - 40px)` and scrolls, so it no longer
+  clips off the top of short viewports (it did at 600px tall).
+
+Verified end-to-end: open menu → open flyout → click Winamp → `/winamp`, both closed.
+
+**Taskbar rebuilt (was the weakest chrome):** 34px → **30px**, flush to the screen edge
+with Luna's three-stop gradient and a `#0831d9` top edge; the Start button is full
+height, rounded only on its right, and carries the **four-colour flag** directly (the
+old white logo in a dark box read as an app tile); dotted drag grips around a real
+Quick Launch (**Show Desktop** now minimises every window via a new
+`minimizeAllPrograms` store action, plus IE); task buttons 28px → **22px** with a
+raised/inset pair of states and a 160px cap; the tray spans the full bar as an inset
+darker strip with mono SVG network/volume glyphs (emoji removed) and an 11px clock.
+`WindowFrame`'s maximised height was synced 34px → 30px so windows sit exactly on the
+bar. The "All Programs" row got XP's green arrow instead of a grey gradient square.
+
+**Bug found and fixed:** the leftover `prefers-color-scheme: dark` block flipped
+`--text-h` to `#f3f4f6`, so on any visitor whose OS is in dark mode every document
+heading rendered **white on white** (the About page was effectively blank at the top).
+The block is gone and `.word-page h1/h2` now pin their own colour.
+
+**Still open:** page components inside documents still use web-scale utilities
+(`text-xl`, `rounded` buttons, `tracking-tight`). They now sit on a Word page, so they
+read as web UI pasted into Word — a content pass, not a CSS one.
 
 **Found while reviewing (not fixed — needs a content decision):**
 `src/registry/apps.js` wires `side_project` (`Side_Projects.ppt - Microsoft PowerPoint`)

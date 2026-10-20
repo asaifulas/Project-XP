@@ -4,6 +4,7 @@ import {
   XP_DESKTOP_ICON_CELL_WIDTH_PX,
 } from '../../constants/xpDesktop'
 import { snapDesktopIconPosition } from '../../utils/desktopIconLayout'
+import XpIconImage from './XpIconImage'
 
 const DRAG_THRESHOLD_PX = 5
 const ZERO_POSITION = { x: 0, y: 0 }
@@ -165,12 +166,7 @@ export default function DesktopIcon({
     >
       <span className="grid h-12 w-12 place-items-center rounded">
         {iconSrc ? (
-          <img
-            src={iconSrc}
-            alt=""
-            className="h-12 w-12 select-none object-contain"
-            draggable="false"
-          />
+          <XpIconImage src={iconSrc} className="h-12 w-12 select-none object-contain" />
         ) : (
           <span
             aria-hidden

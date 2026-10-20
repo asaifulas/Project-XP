@@ -21,10 +21,10 @@ const READONLY_NOTES = [
 
 export default function StickyNotesWidget() {
   return (
-    <div className="flex flex-col">
-      <div className="mb-2 shrink-0 text-[11px] font-bold text-white/90">Sticky notes</div>
+    <div className="flex min-h-0 flex-col">
+      <div className="xp-gadget-title shrink-0">Sticky notes</div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 overflow-y-auto p-2 no-scrollbar">
         {READONLY_NOTES.map((note) => (
           <div
             key={note.id}
@@ -41,7 +41,7 @@ export default function StickyNotesWidget() {
                 <button
                   type="button"
                   onClick={() => openExternalUrl(note.cta.url)}
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-[#25D366] px-2 py-2 text-[11px] font-semibold text-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-colors hover:bg-[#20ba5a] active:bg-[#1aad52]"
+                  className="xp-button mt-2 w-full"
                 >
                   <img
                     src={whatsappIcon}

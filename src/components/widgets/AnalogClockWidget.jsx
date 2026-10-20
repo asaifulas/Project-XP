@@ -34,12 +34,12 @@ export default function AnalogClockWidget() {
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] font-bold text-white/90">Clock</div>
-        <div className="text-[11px] tabular-nums text-white/85">{label}</div>
+      <div className="xp-gadget-title flex items-center justify-between">
+        <span>Clock</span>
+        <span className="tabular-nums font-normal">{label}</span>
       </div>
 
-      <div className="mx-auto grid h-[170px] w-[170px] place-items-center rounded-full border border-white/15 bg-black/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+      <div className="mx-auto my-2 grid h-[150px] w-[150px] place-items-center rounded-full border-2 border-[#0831d9] bg-white">
         <svg
           viewBox="0 0 100 100"
           className="h-[150px] w-[150px]"
@@ -48,18 +48,17 @@ export default function AnalogClockWidget() {
         >
           <defs>
             <radialGradient id="clockFace" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.20)" />
-              <stop offset="45%" stopColor="rgba(255,255,255,0.06)" />
-              <stop offset="100%" stopColor="rgba(0,0,0,0.35)" />
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="100%" stopColor="#e7eefc" />
             </radialGradient>
           </defs>
 
-          <circle cx="50" cy="50" r="48" fill="url(#clockFace)" stroke="rgba(255,255,255,0.25)" />
+          <circle cx="50" cy="50" r="48" fill="url(#clockFace)" stroke="#0831d9" strokeWidth="1.5" />
 
           {Array.from({ length: 60 }).map((_, i) => {
             const isHour = i % 5 === 0
             const len = isHour ? 7 : 3
-            const stroke = isHour ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)'
+            const stroke = isHour ? '#1a1a1a' : '#8aa0c8'
             const strokeWidth = isHour ? 1.4 : 1
             const angle = (i / 60) * 360
 
@@ -82,7 +81,7 @@ export default function AnalogClockWidget() {
             y1="50"
             x2="50"
             y2="26"
-            stroke="rgba(255,255,255,0.85)"
+            stroke="#1a1a1a"
             strokeWidth="2.2"
             strokeLinecap="round"
             transform={`rotate(${hourAngle} 50 50)`}
@@ -92,7 +91,7 @@ export default function AnalogClockWidget() {
             y1="50"
             x2="50"
             y2="17"
-            stroke="rgba(255,255,255,0.9)"
+            stroke="#1a1a1a"
             strokeWidth="1.6"
             strokeLinecap="round"
             transform={`rotate(${minuteAngle} 50 50)`}
@@ -102,12 +101,12 @@ export default function AnalogClockWidget() {
             y1="56"
             x2="50"
             y2="14"
-            stroke="#ffcf2e"
+            stroke="#c42b1c"
             strokeWidth="1.1"
             strokeLinecap="round"
             transform={`rotate(${secondAngle} 50 50)`}
           />
-          <circle cx="50" cy="50" r="2.6" fill="#ffcf2e" stroke="rgba(0,0,0,0.45)" />
+          <circle cx="50" cy="50" r="2.2" fill="#c42b1c" stroke="#1a1a1a" />
         </svg>
       </div>
     </div>

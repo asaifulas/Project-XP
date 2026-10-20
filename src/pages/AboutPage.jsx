@@ -19,7 +19,7 @@ export default function AboutPage() {
   const win = app?.window ?? {}
   const shell = win.shell ?? 'default'
 
-  const ieInitial = win.initialUrl ?? 'https://app.inerva.my'
+  const ieInitial = win.initialUrl ?? 'https://penyulab.my'
   const [ieCaption, setIeCaption] = useState(() =>
     app?.id === 'ie' ? ieInitial : '',
   )

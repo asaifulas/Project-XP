@@ -28,7 +28,7 @@ export default function MergeSheet() {
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#ece9d8]">
+    <div className="excel-sheet flex min-h-0 min-w-0 flex-1 flex-col bg-[#ece9d8]">
       <div className="flex items-center gap-2 border-b border-black/20 px-3 py-2 text-[11px]">
         <button
           type="button"

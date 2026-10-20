@@ -93,7 +93,7 @@ export default function RecipientsSheet() {
   const totalH = COL_HEADER_H + GRID_ROWS * ROW_H
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#808080]">
+    <div className="excel-sheet flex min-h-0 min-w-0 flex-1 flex-col bg-[#808080]">
       <div className="flex shrink-0 items-center gap-2 border-b border-black/20 bg-[#ece9d8] px-2 py-1 text-[11px]">
         <button
           type="button"
