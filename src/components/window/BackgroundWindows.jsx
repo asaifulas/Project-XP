@@ -1,11 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import WindowFrame from './WindowFrame'
+import { FolderNavigationProvider } from '../apps/folder/FolderNavigationContext'
 import {
   activateBackgroundWindow,
   closeWindowAtPath,
   getOtherUrls,
 } from '../../utils/windowStackUrl'
 import {
+  getAppFromStackKey,
   getWindowFrameOptions,
   getWindowIconSrc,
   getWindowTitle,
@@ -40,10 +42,9 @@ export default function BackgroundWindows() {
         const title = getWindowTitle(stackKey)
         const iconSrc = getWindowIconSrc(stackKey)
         const resolvedShell = shell ?? 'default'
-
-        return (
+        const app = getAppFromStackKey(stackKey)
+        const frame = (
           <WindowFrame
-            key={stackKey}
             programId={programIdForStackKey(stackKey)}
             title={title}
             iconSrc={iconSrc}
@@ -67,6 +68,16 @@ export default function BackgroundWindows() {
             {body}
           </WindowFrame>
         )
+
+        if (resolvedShell === 'folder') {
+          return (
+            <FolderNavigationProvider key={stackKey} currentApp={app} active={false}>
+              {frame}
+            </FolderNavigationProvider>
+          )
+        }
+
+        return <div key={stackKey}>{frame}</div>
       })}
     </>
   )

@@ -13,6 +13,7 @@ const STACK = new Set([
   '/pdf',
   '/folder',
   '/gallery',
+  '/playground',
   '/my_computer',
   '/my_documents',
   '/internet_explorer',
@@ -21,6 +22,11 @@ const STACK = new Set([
   '/excel',
   '/ppt',
   '/certimagic',
+  '/pinball',
+  '/solitaire',
+  '/minesweeper',
+  '/paint',
+  '/readme',
 ])
 
 export function isStackablePath(pathname) {
@@ -138,6 +144,44 @@ export function openForegroundPreserveStack(
     pathname: targetPath,
     search: buildStackSearch({ appId: targetAppId, otherKeys: dedup }),
   })
+}
+
+/**
+ * Browse to another folder inside the same Explorer window (XP “same window” navigation).
+ * Does not push the current folder onto `otherurl` — Back/Forward are handled via location.state.
+ *
+ * @param {import('react-router-dom').NavigateFunction} navigate
+ * @param {LocationLike} location
+ * @param {string} targetPath
+ * @param {string | null} [targetAppId]
+ * @param {Record<string, unknown>} [state] Merged into location.state (explorer history, stable programId).
+ */
+export function navigateFolderInPlace(
+  navigate,
+  location,
+  targetPath,
+  targetAppId = null,
+  state = {},
+) {
+  const others = location.pathname === '/' ? [] : getOtherUrls(location.search)
+  const pathname = targetPath || location.pathname
+  const targetKey = buildStackKey(pathname, targetAppId)
+  const currentKey = stackKeyFromLocation(location)
+  // Same folder already showing — still refresh state (history index) when provided.
+  const stateOnly =
+    currentKey === targetKey && state && typeof state === 'object' && Object.keys(state).length > 0
+  if (currentKey === targetKey && !stateOnly) return
+  navigate(
+    {
+      pathname,
+      search: buildStackSearch({ appId: targetAppId, otherKeys: others }),
+      state: {
+        ...(location.state && typeof location.state === 'object' ? location.state : {}),
+        ...state,
+      },
+    },
+    { replace: stateOnly },
+  )
 }
 
 /**

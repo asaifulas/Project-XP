@@ -7,6 +7,9 @@ Personal portfolio website inspired by **Windows XP**: a desktop UI, draggable w
 - **Windows**: draggable `WindowFrame` with minimize/close (select apps also use custom chrome)
 - **Window stack in URL**: implemented (`otherurl` query params + `app` disambiguation)
 - **Taskbar**: Start button/menu + running programs
+- **Playground folder** (desktop, under Gallery): nested `Games` / `Applications` / `Webpage` with per-app folders, launch shortcuts, and Word `README.md` docs
+- **Classic XP toys** (lazy-loaded): 3D Pinball, Solitaire (Klondike), Minesweeper, Paint — phone-friendly controls
+- **Office / media spoofs**: Word docs, PowerPoint Experience deck, Excel/CertiMagic, Winamp, PDF reader, IE iframe shell
 
 ## Tech stack
 - **React 19**: UI rendering + stateful components
@@ -15,27 +18,50 @@ Personal portfolio website inspired by **Windows XP**: a desktop UI, draggable w
 - **Tailwind CSS + custom CSS**: XP look-and-feel with utility classes plus a few handcrafted styles
 - **React DnD (HTML5 backend)**: drag **window title bars** only (desktop icons use pointer events)
 - **Vite**: fast dev server + builds; also used for importing local audio assets via `import.meta.glob`
+- **Canvas / game logic**: Pinball physics + render, Minesweeper board, Solitaire engine, Paint raster tools (under `src/components/games/`)
 
-**Architecture (short):** see [docs/HOW-IT-WORKS.md](./docs/HOW-IT-WORKS.md) for apps registry, URL window stack, Zustand, and React DnD.
+**Architecture (short):** see [docs/HOW-IT-WORKS.md](./docs/HOW-IT-WORKS.md) for apps registry, URL window stack, Zustand, and React DnD. Game plan notes live in [games.md](./games.md).
 
 ## Project structure (current)
 - `src/main.jsx`: mounts router + DnD provider
 - `src/App.jsx`: router (routes nested under `DesktopShell`)
+- `src/registry/apps.js`: single source of truth for routes, desktop icons, folder `children`, and `renderStack`
 - `src/components/layouts/`:
   - `DesktopShell.jsx`: keeps desktop mounted, renders background windows + active route
   - `AppLayout.jsx`: wallpaper + desktop icons + taskbar
 - `src/components/window/`:
-  - `WindowFrame.jsx`: draggable window frame
+  - `WindowFrame.jsx`: draggable window frame (Word / Excel / folder / compact / frameless chrome)
   - `BackgroundWindows.jsx`: renders inactive windows from URL
-  - `windowRegistry.jsx`: maps path → title/body/options
-- `src/pages/`: active window routes (`/about`, `/biodata`, `/calculator`, `/winamp`)
-- `src/components/windows/`: reusable window content
+  - `windowRegistry.jsx`: maps stack key → title/body/options
+- `src/pages/`: active window routes (`/welcome`, `/pinball`, `/solitaire`, `/minesweeper`, `/paint`, `/playground`, `/readme`, …)
+- `src/components/windows/`: document bodies (Welcome, Journey, Profile, Playground READMEs, …)
 - `src/components/apps/`: “apps” that can be mounted as foreground routes or background stacked windows
   - `apps/winamp/`: Winamp-style audio player skin + logic
   - `apps/calculator/`: XP Calculator implementation
+  - `apps/folder/`: Explorer chrome + `FolderApp` nested shortcuts
+  - `apps/certimagic/`, `apps/excel/`, `apps/pdf/`, `apps/ie/`
+- `src/components/games/`: Pinball, Solitaire, Minesweeper, Paint (+ `_shared` phone control pad / layout hooks)
 - `src/utils/windowStackUrl.js`: URL window stack helpers (`otherurl`)
 - `src/utils/loadSongTracks.js`: Vite-powered loader for `src/assets/songs/*` playlist entries
 - `src/stores/useShellStore.js`: taskbar + running programs + window positions
+
+## Playground desktop tree
+Desktop icon **Playground** (order just below **Gallery**):
+
+```
+Playground/
+  Games/
+    Pinball/          → 3D Pinball + README.md (Word)
+    Minesweeper/      → Minesweeper + README.md
+    Solitaire/        → Solitaire + README.md
+  Applications/
+    Winamp/           → Winamp + README.md
+    Paint/            → Paint + README.md
+    CertMagic/        → CertiMagic + README.md
+  Webpage/            (empty for now)
+```
+
+Folder windows use `shell: 'folder'` and `children: [appId, …]`. Nested folders share `/folder?app=<id>`; the root uses `/playground`. Each `README.md` opens in the Word shell on `/readme?app=readme_<name>` with engineer-oriented docs (idea, tech, how it works). Welcome.doc’s Playground row expands to the same tree as dropdowns.
 
 ## Getting started
 Install deps:

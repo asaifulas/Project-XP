@@ -1,9 +1,83 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getAppById } from '../../registry/apps'
 import { openExternalUrl } from '../../utils/openExternalUrl'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 import { useShellStore } from '../../stores/useShellStore'
 import WordA4Page from '../window/WordA4Page'
+
+/** Nested Playground tree — mirrors desktop folder structure. */
+const PLAYGROUND_TREE = {
+  appId: 'playground_folder',
+  label: 'Playground/',
+  children: [
+    {
+      appId: 'playground_games',
+      label: 'Games/',
+      children: [
+        {
+          appId: 'playground_pinball',
+          label: 'Pinball/',
+          children: [
+            { appId: 'pinball', label: '3D Pinball' },
+            { appId: 'readme_pinball', label: 'README.md' },
+          ],
+        },
+        {
+          appId: 'playground_minesweeper',
+          label: 'Minesweeper/',
+          children: [
+            { appId: 'minesweeper', label: 'Minesweeper' },
+            { appId: 'readme_minesweeper', label: 'README.md' },
+          ],
+        },
+        {
+          appId: 'playground_solitaire',
+          label: 'Solitaire/',
+          children: [
+            { appId: 'solitaire', label: 'Solitaire' },
+            { appId: 'readme_solitaire', label: 'README.md' },
+          ],
+        },
+      ],
+    },
+    {
+      appId: 'playground_applications',
+      label: 'Applications/',
+      children: [
+        {
+          appId: 'playground_winamp',
+          label: 'Winamp/',
+          children: [
+            { appId: 'winamp', label: 'Winamp' },
+            { appId: 'readme_winamp', label: 'README.md' },
+          ],
+        },
+        {
+          appId: 'playground_paint',
+          label: 'Paint/',
+          children: [
+            { appId: 'paint', label: 'Paint' },
+            { appId: 'readme_paint', label: 'README.md' },
+          ],
+        },
+        {
+          appId: 'playground_certimagic',
+          label: 'CertMagic/',
+          children: [
+            { appId: 'certimagic', label: 'CertMagic' },
+            { appId: 'readme_certimagic', label: 'README.md' },
+          ],
+        },
+      ],
+    },
+    {
+      appId: 'playground_webpage',
+      label: 'Webpage/',
+      children: [],
+    },
+  ],
+}
 
 const DESKTOP_GUIDE_ITEMS = [
   {
@@ -53,8 +127,9 @@ const DESKTOP_GUIDE_ITEMS = [
     name: 'Playground/',
     type: 'DIR',
     typeClass: 'bg-[#f4c542] text-zinc-900',
-    description: 'Experiments, motion studies, small demos, and curiosity-driven builds.',
-    appId: null,
+    description:
+      'Experiments and XP-era toys — Games, Applications, and Webpage folders with shortcuts plus engineer READMEs.',
+    tree: PLAYGROUND_TREE,
   },
   {
     name: 'Articles/',
@@ -102,12 +177,77 @@ const DESKTOP_GUIDE_ITEMS = [
 
 function isGuideItemAvailable(item) {
   if (item.action === 'systemProperties') return true
+  if (item.tree) return Boolean(getAppById(item.tree.appId)?.path)
   const app = item.appId ? getAppById(item.appId) : null
   return Boolean(app?.path || app?.externalUrl)
 }
 
-function DesktopGuideItem({ item, onOpen }) {
+function openRegistryApp(appId, navigate, location) {
+  const app = appId ? getAppById(appId) : null
+  if (!app) return
+  if (app.externalUrl) {
+    openExternalUrl(app.externalUrl)
+    return
+  }
+  if (app.path) openForegroundPreserveStack(navigate, location, app.path, app.id)
+}
+
+function PlaygroundTreeNode({ node, depth = 0, onOpen }) {
+  const [open, setOpen] = useState(depth < 1)
+  const hasChildren = Array.isArray(node.children) && node.children.length > 0
+  const isDir = node.label.endsWith('/')
+  const app = getAppById(node.appId)
+  const canOpen = Boolean(app?.path || app?.externalUrl)
+
+  return (
+    <li className="m-0 list-none p-0">
+      <div
+        className="flex items-center gap-1 rounded-sm py-0.5 pr-1"
+        style={{ paddingLeft: `${depth * 12}px` }}
+      >
+        {hasChildren || (isDir && !hasChildren) ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[2px] border border-zinc-400/80 bg-white text-[9px] font-bold leading-none text-zinc-700 hover:bg-zinc-100"
+          >
+            {open ? '−' : '+'}
+          </button>
+        ) : (
+          <span className="inline-block w-4 shrink-0" aria-hidden />
+        )}
+        {canOpen ? (
+          <button
+            type="button"
+            onClick={() => onOpen(node.appId)}
+            className="min-w-0 truncate font-mono text-[11px] font-bold text-[#0000ee] underline decoration-[#0000ee]/70 underline-offset-2 hover:text-[#0000cc]"
+          >
+            {node.label}
+          </button>
+        ) : (
+          <span className="min-w-0 truncate font-mono text-[11px] font-bold text-zinc-800">{node.label}</span>
+        )}
+        {isDir && !hasChildren ? (
+          <span className="rounded-[2px] border border-zinc-300/90 bg-zinc-100 px-1 py-px text-[8px] font-semibold uppercase tracking-wide text-zinc-500">
+            Empty
+          </span>
+        ) : null}
+      </div>
+      {hasChildren && open ? (
+        <ul className="m-0 list-none p-0">
+          {node.children.map((child) => (
+            <PlaygroundTreeNode key={child.appId + child.label} node={child} depth={depth + 1} onOpen={onOpen} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  )
+}
+
+function DesktopGuideItem({ item, onOpen, onOpenAppId }) {
   const available = isGuideItemAvailable(item)
+  const [treeOpen, setTreeOpen] = useState(false)
 
   const body = (
     <div className="flex items-start gap-2">
@@ -151,6 +291,65 @@ function DesktopGuideItem({ item, onOpen }) {
     )
   }
 
+  if (item.tree) {
+    return (
+      <li className="rounded-sm border border-zinc-300/90 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_1px_2px_rgba(0,0,0,0.08)]">
+        <button
+          type="button"
+          onClick={() => setTreeOpen((v) => !v)}
+          aria-expanded={treeOpen}
+          className="flex w-full items-start gap-2 px-2.5 py-2 text-left transition-colors hover:bg-[#eef3fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#316ac5]"
+        >
+          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[2px] border border-zinc-400/80 bg-[#f4c542]/40 text-[9px] font-bold leading-none text-zinc-800">
+            {treeOpen ? '−' : '+'}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-2">
+              <span
+                className={[
+                  'mt-0.5 shrink-0 rounded-[2px] px-1 py-px text-[8px] font-bold leading-none tracking-wide',
+                  item.typeClass,
+                ].join(' ')}
+              >
+                {item.type}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[11px] font-bold leading-tight text-[#0000ee] underline decoration-[#0000ee]/70 underline-offset-2">
+                  {item.name}
+                </p>
+                <p className="mt-1 text-[11px] leading-snug text-zinc-600">{item.description}</p>
+              </div>
+            </div>
+          </div>
+        </button>
+        {treeOpen ? (
+          <div className="border-t border-zinc-200 bg-[#faf9f4] px-2 py-2">
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenAppId(item.tree.appId)}
+                className="rounded-[2px] border border-[#316ac5]/40 bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold text-[#0000ee] hover:bg-[#eef3fc]"
+              >
+                Open folder
+              </button>
+              <span className="text-[9px] uppercase tracking-wide text-zinc-500">Desktop \\ Playground</span>
+            </div>
+            <ul className="m-0 list-none p-0">
+              {item.tree.children.map((child) => (
+                <PlaygroundTreeNode
+                  key={child.appId + child.label}
+                  node={child}
+                  depth={0}
+                  onOpen={onOpenAppId}
+                />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </li>
+    )
+  }
+
   return (
     <li>
       <button
@@ -174,14 +373,11 @@ export default function WelcomeWindowContent() {
       setSystemPropertiesOpen(true)
       return
     }
-    const app = item.appId ? getAppById(item.appId) : null
-    if (!app) return
-    if (app.externalUrl) {
-      openExternalUrl(app.externalUrl)
-      return
-    }
-    if (app.path) openForegroundPreserveStack(navigate, location, app.path, app.id)
+    openRegistryApp(item.appId, navigate, location)
   }
+
+  const handleOpenAppId = (appId) => openRegistryApp(appId, navigate, location)
+
   return (
     <WordA4Page>
       <article className="text-[13px] leading-[1.55] text-zinc-900">
@@ -222,7 +418,12 @@ export default function WelcomeWindowContent() {
           </div>
           <ul className="m-0 list-none space-y-2 bg-[#f5f3eb] p-2.5">
             {DESKTOP_GUIDE_ITEMS.map((item) => (
-              <DesktopGuideItem key={item.name} item={item} onOpen={handleOpenItem} />
+              <DesktopGuideItem
+                key={item.name}
+                item={item}
+                onOpen={handleOpenItem}
+                onOpenAppId={handleOpenAppId}
+              />
             ))}
           </ul>
         </section>
@@ -233,21 +434,15 @@ export default function WelcomeWindowContent() {
           <span className="font-semibold">Experience.ppt</span>, and then{' '}
           <span className="font-semibold">Projects_Saiful.pdf</span>. For a behind-the-scenes look at how
           this site is built, open <span className="font-semibold">System Properties</span>. Queue something
-          up in <span className="font-semibold">Winamp</span> while you browse.
+          up in <span className="font-semibold">Winamp</span> while you browse — or dig into{' '}
+          <span className="font-semibold">Playground</span> for Pinball, Solitaire, Minesweeper, Paint, and
+          more.
         </p>
 
         <p className="mt-4 text-justify">
           You’ll also notice a familiar little assistant nearby. Clippy is here as a lightweight guide — part
           nostalgia, part navigation helper — for first-time visitors.
         </p>
-
-        {/* <div className="mt-5 rounded border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2 text-[12px] text-zinc-700">
-          <p className="font-semibold">Optional: add a picture</p>
-          <p className="mt-1">
-            You can place a small photo here later (e.g. a portrait, a workspace shot, or a “Windows XP badge”
-            image) to make the welcome page feel more personal.
-          </p>
-        </div> */}
 
         <p className="mt-5 text-justify">
           Thanks for stopping by. Take your time, click around, and explore.
@@ -256,4 +451,3 @@ export default function WelcomeWindowContent() {
     </WordA4Page>
   )
 }
-

@@ -376,7 +376,9 @@ export default function WindowFrame({
                     shell === 'certimagic'
                   ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-0'
                   : compactRestoredFrame
-                    ? `xp-client shrink-0 overflow-visible ${noClientPadding ? 'p-0' : 'p-4'}`
+                    ? fillsViewport || isPhone
+                      ? `xp-client flex min-h-0 flex-1 flex-col overflow-hidden ${noClientPadding ? 'p-0' : 'p-4'}`
+                      : `xp-client shrink-0 overflow-visible ${noClientPadding ? 'p-0' : 'p-4'}`
                     : 'xp-client flex min-h-0 flex-1 overflow-auto p-4'
             }
           >

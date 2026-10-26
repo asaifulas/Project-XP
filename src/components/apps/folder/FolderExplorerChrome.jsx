@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MyComputerDetailsPane } from './MyComputerContent'
 import { useShellStore } from '../../../stores/useShellStore'
+import { useFolderNavigation } from './FolderNavigationContext'
 
 /** Small yellow folder glyph (XP-style) */
 function MiniFolder({ className = 'h-3.5 w-4' }) {
@@ -94,18 +95,19 @@ function TaskLink({ icon, label, onClick, disabled = false }) {
 }
 
 /** Large green circular nav (XP Standard Buttons). */
-function NavOrb({ dir, disabled }) {
+function NavOrb({ dir, disabled, onClick }) {
   const arrow = dir === 'back' ? '◀' : '▶'
   return (
     <button
       type="button"
       disabled={disabled}
+      onClick={onClick}
       aria-label={dir === 'back' ? 'Back' : 'Forward'}
       className={[
         'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
         disabled
-          ? 'border-[#9aa899] bg-[linear-gradient(180deg,#c8d4c0_0%,#a8b4a0_55%,#909888_100%)] text-[#f0f4f0]'
-          : 'border-[#1a5a1a] bg-[radial-gradient(circle_at_35%_30%,#8fdf8f_0%,#3cb043_35%,#228b22_70%,#1a6a1a_100%)] text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.45)]',
+          ? 'cursor-default border-[#9aa899] bg-[linear-gradient(180deg,#c8d4c0_0%,#a8b4a0_55%,#909888_100%)] text-[#f0f4f0]'
+          : 'border-[#1a5a1a] bg-[radial-gradient(circle_at_35%_30%,#8fdf8f_0%,#3cb043_35%,#228b22_70%,#1a6a1a_100%)] text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.45)] hover:brightness-110',
       ].join(' ')}
     >
       <span className="text-[11px] font-bold leading-none">{arrow}</span>
@@ -123,6 +125,45 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
   const isMyComputer = variant === 'myComputer'
   const setSystemPropertiesOpen = useShellStore((s) => s.setSystemPropertiesOpen)
   const AddressIcon = isMyComputer ? MiniComputer : MiniFolder
+  const {
+    canBack,
+    canForward,
+    canUp,
+    goBack,
+    goForward,
+    goUp,
+    goToAddress,
+    addressPath: liveAddressPath,
+    addressHistory,
+    active: navActive,
+  } = useFolderNavigation()
+
+  const resolvedAddress = liveAddressPath || addressPath || ''
+  const [addressInput, setAddressInput] = useState(resolvedAddress)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [goFailed, setGoFailed] = useState(false)
+  const addressWrapRef = useRef(null)
+
+  useEffect(() => {
+    setAddressInput(resolvedAddress)
+    setGoFailed(false)
+  }, [resolvedAddress])
+
+  useEffect(() => {
+    if (!historyOpen) return undefined
+    const onDoc = (event) => {
+      if (!addressWrapRef.current?.contains(event.target)) setHistoryOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [historyOpen])
+
+  const submitAddress = () => {
+    if (!navActive) return
+    const ok = goToAddress(addressInput)
+    setGoFailed(!ok)
+    if (ok) setHistoryOpen(false)
+  }
 
   const rebarStrip =
     'border-b border-[#aca899] bg-[linear-gradient(180deg,#fffcf8_0%,#f0ebe0_40%,#e4dfd4_100%)] shadow-[inset_0_1px_0_#fff]'
@@ -159,15 +200,20 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
       {/* Standard Buttons toolbar */}
       <div className={`flex shrink-0 flex-wrap items-center gap-2 px-2 py-1.5 ${rebarStrip}`}>
         <div className="flex items-center gap-1">
-          <NavOrb dir="back" disabled={false} />
-          <NavOrb dir="forward" disabled />
+          <NavOrb dir="back" disabled={!canBack} onClick={goBack} />
+          <NavOrb dir="forward" disabled={!canForward} onClick={goForward} />
         </div>
         <span className="h-6 w-px shrink-0 bg-[#aca899] shadow-[1px_0_0_#fff]" />
         <button
           type="button"
-          disabled
-          className="flex h-7 cursor-default items-center gap-0.5 rounded-sm border border-[#a89878] bg-[linear-gradient(180deg,#fffef8_0%,#ece4c8_100%)] px-1 shadow-[inset_0_1px_0_#fff] disabled:opacity-70"
+          disabled={!canUp}
+          onClick={goUp}
+          className={[
+            'flex h-7 items-center gap-0.5 rounded-sm border border-[#a89878] bg-[linear-gradient(180deg,#fffef8_0%,#ece4c8_100%)] px-1 shadow-[inset_0_1px_0_#fff]',
+            canUp ? 'hover:bg-[#d6e8ff]' : 'cursor-default opacity-70',
+          ].join(' ')}
           aria-label="Up"
+          title="Up"
         >
           <MiniFolder className="h-4 w-[18px]" />
           <span className="text-[10px] font-bold leading-none text-[#228b22]">▲</span>
@@ -213,23 +259,73 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
       {/* Address bar row */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[#aca899] bg-[#ece9d8] px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
         <span className="shrink-0 pl-0.5 text-[11px] font-normal text-[#5c5346]">Address</span>
-        <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-sm border border-[#7f9db9] bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)]">
-          <div className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5">
-            <AddressIcon className="h-3.5 w-4 shrink-0" />
-            <div className="min-w-0 flex-1 truncate font-xp text-[11px] leading-tight text-black">{addressPath}</div>
-          </div>
-          <button
-            type="button"
-            className="shrink-0 border-l border-[#7f9db9] bg-[linear-gradient(180deg,#f8f6f0_0%,#e8e4d8_100%)] px-1.5 text-[10px] text-[#333] hover:bg-[#d6e8ff]"
-            aria-label="Address history"
+        <div className="relative min-w-0 flex-1" ref={addressWrapRef}>
+          <form
+            className={[
+              'flex min-w-0 flex-1 items-stretch overflow-hidden rounded-sm border bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)]',
+              goFailed ? 'border-[#c00]' : 'border-[#7f9db9]',
+            ].join(' ')}
+            onSubmit={(e) => {
+              e.preventDefault()
+              submitAddress()
+            }}
           >
-            ▼
-          </button>
+            <div className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5">
+              <AddressIcon className="h-3.5 w-4 shrink-0" />
+              <input
+                type="text"
+                value={addressInput}
+                onChange={(e) => {
+                  setAddressInput(e.target.value)
+                  setGoFailed(false)
+                }}
+                onFocus={(e) => e.target.select()}
+                spellCheck={false}
+                aria-label="Address"
+                disabled={!navActive}
+                className="min-w-0 flex-1 border-0 bg-transparent font-xp text-[11px] leading-tight text-black outline-none disabled:text-[#666]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => navActive && setHistoryOpen((v) => !v)}
+              disabled={!navActive}
+              className="shrink-0 border-l border-[#7f9db9] bg-[linear-gradient(180deg,#f8f6f0_0%,#e8e4d8_100%)] px-1.5 text-[10px] text-[#333] hover:bg-[#d6e8ff] disabled:cursor-default disabled:opacity-70"
+              aria-label="Address history"
+              aria-expanded={historyOpen}
+            >
+              ▼
+            </button>
+          </form>
+          {historyOpen && navActive && addressHistory.length > 0 ? (
+            <ul
+              className="absolute left-0 right-0 top-full z-20 m-0 max-h-40 list-none overflow-auto border border-[#7f9db9] bg-white p-0 shadow-md"
+              role="listbox"
+            >
+              {[...new Set(addressHistory)].map((path) => (
+                <li key={path} className="m-0 p-0">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1 px-1.5 py-1 text-left font-xp text-[11px] hover:bg-[#316ac5] hover:text-white"
+                    onClick={() => {
+                      setAddressInput(path)
+                      setHistoryOpen(false)
+                      goToAddress(path)
+                    }}
+                  >
+                    <AddressIcon className="h-3.5 w-4 shrink-0" />
+                    <span className="truncate">{path}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <button
           type="button"
-          disabled
-          className="flex shrink-0 cursor-default items-center gap-1 rounded-sm border border-[#2a7a2a] bg-[linear-gradient(180deg,#d8f8c8_0%,#7cd87c_35%,#38b038_70%,#2a902a_100%)] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] disabled:opacity-90"
+          onClick={submitAddress}
+          disabled={!navActive}
+          className="flex shrink-0 items-center gap-1 rounded-sm border border-[#2a7a2a] bg-[linear-gradient(180deg,#d8f8c8_0%,#7cd87c_35%,#38b038_70%,#2a902a_100%)] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] hover:brightness-105 disabled:cursor-default disabled:opacity-90"
         >
           <span className="text-[10px]" aria-hidden>
             ▶

@@ -1,18 +1,79 @@
+import { useState } from 'react'
+import { getAppById, isFolderApp } from '../../../registry/apps'
+import XpIconImage from '../../desktop/XpIconImage'
+import { useFolderNavigation } from './FolderNavigationContext'
+
+/** @param {{ folderLabel?: string, desktop?: { label?: string }, title?: string, id: string } | null | undefined} app */
+function folderItemLabel(app) {
+  if (!app) return 'Unknown'
+  return app.folderLabel ?? app.desktop?.label ?? app.title ?? app.id
+}
+
 /**
- * Folder window body: large-icon list area for shortcuts to nested apps.
+ * Folder window body: large-icon list of nested registry shortcuts.
+ * Folders browse in the same Explorer window; files/apps open new windows.
  * @param {{ childAppIds?: string[] }} props
- *   `childAppIds` — registry `APPS[].id` values listed in the parent folder entry's `children` (see `apps.js`); UI wiring comes later.
  */
 export default function FolderApp({ childAppIds = [] }) {
-  const empty = childAppIds.length === 0
+  const { openItem } = useFolderNavigation()
+  const [selectedId, setSelectedId] = useState(null)
+  const items = childAppIds.map((id) => getAppById(id)).filter(Boolean)
+  const empty = items.length === 0
 
   return (
     <div
-      className="flex min-h-[240px] flex-1 flex-col p-3"
+      className="flex min-h-[240px] flex-1 flex-col bg-white p-3"
       role="list"
-      aria-label={empty ? 'Empty folder' : `Folder, ${childAppIds.length} items`}
+      aria-label={empty ? 'Empty folder' : `Folder, ${items.length} items`}
+      onClick={() => setSelectedId(null)}
     >
-      {/* Empty until `childAppIds` are rendered as launchable shortcuts */}
+      {empty ? (
+        <p className="m-0 self-start font-xp text-[11px] text-[#666]">This folder is empty.</p>
+      ) : (
+        <ul className="m-0 flex list-none flex-wrap content-start gap-1 p-0">
+          {items.map((app) => {
+            const label = folderItemLabel(app)
+            const selected = selectedId === app.id
+            const folder = isFolderApp(app)
+            return (
+              <li key={app.id} role="listitem" className="m-0 p-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedId(app.id)
+                    if (window.matchMedia('(max-width: 767px)').matches) openItem(app)
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    openItem(app)
+                  }}
+                  className={[
+                    'group flex w-[74px] flex-col items-center gap-1 rounded-sm border px-1 py-1.5 text-center focus-visible:outline-none',
+                    selected
+                      ? 'border-[#316ac5] bg-[#316ac5] text-white'
+                      : 'border-transparent hover:border-[#316ac5]/40 hover:bg-[#316ac5]/10',
+                  ].join(' ')}
+                  title={folder ? `${label} (folder)` : label}
+                >
+                  <XpIconImage
+                    src={app.icon}
+                    className="h-8 w-8 object-contain drop-shadow-[1px_1px_0_rgba(0,0,0,0.25)]"
+                  />
+                  <span
+                    className={[
+                      'line-clamp-2 w-full break-words font-xp text-[11px] leading-tight',
+                      selected ? 'text-white' : 'text-black group-hover:text-[#000080]',
+                    ].join(' ')}
+                  >
+                    {label}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
