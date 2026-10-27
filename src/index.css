@@ -765,6 +765,35 @@ code {
     text-decoration: underline;
   }
 
+  /* Match Luna titlebar Close — red bevel + white ×. */
+  .xp-clippy-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.65);
+    border-radius: 3px;
+    background: linear-gradient(180deg, #e36d5d 0%, #c42b1c 55%, #9e1a10 100%);
+    color: #fff;
+    font: 700 12px/1 "XP Tahoma", Tahoma, "MS Sans Serif", sans-serif;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    cursor: default;
+  }
+
+  .xp-clippy-close:hover {
+    filter: brightness(1.08);
+  }
+
+  .xp-clippy-close:active {
+    background: linear-gradient(180deg, #9e1a10 0%, #c42b1c 100%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
   /*
    * Luna window frame. XP defines a window with a 3px blue frame and no drop
    * shadow at all — the shadow that used to live here was Vista/7's Aero, and it

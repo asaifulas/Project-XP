@@ -139,7 +139,8 @@ function ClippyBalloon({
         type="button"
         onClick={onClose}
         aria-label="Close navigation hints"
-        className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center border border-black bg-[#ece9d8] text-[12px] leading-none text-black hover:bg-[#c42b1c] hover:text-white"
+        title="Close"
+        className="xp-clippy-close absolute right-1 top-1"
       >
         ×
       </button>
@@ -386,7 +387,7 @@ export default function DesktopClippy() {
             type="button"
             aria-label="Hide Clippy to system tray"
             title="Hide to tray"
-            className="absolute -right-1 -top-1 z-[1] flex h-5 w-5 items-center justify-center border border-black bg-[#ece9d8] text-[11px] leading-none text-black hover:bg-[#c42b1c] hover:text-white"
+            className="xp-clippy-close absolute right-0 top-0 z-[1]"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation()
