@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFramelessWindow } from '../../window/FramelessWindowContext'
+import { useShellStore } from '../../../stores/useShellStore'
 import { loadSongTracks } from '../../../utils/loadSongTracks'
 import './WinampApp.css'
 
@@ -130,11 +131,16 @@ export default function WinampApp() {
     fileInputRef.current?.click()
   }
 
+  const masterVolume = useShellStore((s) => s.masterVolume)
+  const masterMuted = useShellStore((s) => s.masterMuted)
+
   useEffect(() => {
     const el = audioRef.current
     if (!el) return undefined
-    el.volume = volume
-  }, [volume])
+    el.dataset.shellBaseVolume = String(volume)
+    const gain = masterMuted ? 0 : masterVolume
+    el.volume = Math.min(1, Math.max(0, volume * gain))
+  }, [masterMuted, masterVolume, volume])
 
   useEffect(() => {
     if (!hasTracks) return

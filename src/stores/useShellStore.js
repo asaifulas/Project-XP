@@ -31,7 +31,7 @@ const defaultWallpaper =
   wallpapers[0] ??
   null
 
-export const useShellStore = create((set) => ({
+export const useShellStore = create((set, get) => ({
   startMenuOpen: false,
   runningPrograms: initialPrograms,
   /** @type {Record<string, { x: number; y: number }>} Last translate position per window (programId). */
@@ -40,9 +40,29 @@ export const useShellStore = create((set) => ({
   currentWallpaper: defaultWallpaper,
   systemPropertiesOpen: false,
   wallpaperSettingsOpen: false,
+  /** Clippy hidden to the system tray (click tray icon to restore). */
+  clippyInTray: false,
+  /** Site-wide volume (0–1). Browsers can't set OS volume. */
+  masterVolume: 0.85,
+  masterMuted: false,
 
   setSystemPropertiesOpen: (open) => set({ systemPropertiesOpen: open }),
   setWallpaperSettingsOpen: (open) => set({ wallpaperSettingsOpen: open }),
+  setClippyInTray: (inTray) => set({ clippyInTray: Boolean(inTray) }),
+  setMasterVolume: (volume) => {
+    const n = Number(volume)
+    const next = Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : get().masterVolume
+    set({ masterVolume: next, masterMuted: next <= 0 ? true : false })
+  },
+  toggleMasterMute: () =>
+    set((s) => ({
+      masterMuted: !s.masterMuted,
+    })),
+  /** Effective gain for HTML media (0 when muted). */
+  getEffectiveMasterVolume: () => {
+    const s = get()
+    return s.masterMuted ? 0 : s.masterVolume
+  },
 
   toggleStartMenu: () => set((s) => ({ startMenuOpen: !s.startMenuOpen })),
   closeStartMenu: () => set({ startMenuOpen: false }),
@@ -134,6 +154,42 @@ export const useShellStore = create((set) => ({
           ...p,
           minimized: nextMinimized,
           active: !nextMinimized,
+        }
+      }),
+    })),
+  setProgramMinimized: (id, minimized) =>
+    set((state) => ({
+      runningPrograms: state.runningPrograms.map((p) => {
+        if (p.id !== id) return minimized ? p : { ...p, active: false }
+        return {
+          ...p,
+          minimized: Boolean(minimized),
+          active: !minimized,
+        }
+      }),
+    })),
+  setProgramMaximized: (id, maximized) =>
+    set((state) => ({
+      runningPrograms: state.runningPrograms.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              maximized: Boolean(maximized),
+              minimized: false,
+              active: true,
+            }
+          : { ...p, active: false },
+      ),
+    })),
+  toggleProgramMaximize: (id) =>
+    set((state) => ({
+      runningPrograms: state.runningPrograms.map((p) => {
+        if (p.id !== id) return { ...p, active: false }
+        return {
+          ...p,
+          maximized: !(p.maximized ?? false),
+          minimized: false,
+          active: true,
         }
       }),
     })),

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getDesktopApps } from '../../registry/apps'
+import { useShellStore } from '../../stores/useShellStore'
 import { openExternalUrl } from '../../utils/openExternalUrl'
 import { openForegroundPreserveStack } from '../../utils/windowStackUrl'
 
@@ -101,23 +102,28 @@ function isPhoneContainer(containerWidth) {
   return containerWidth < 768
 }
 
+/**
+ * Keep Clippy on the desktop workspace (above the taskbar). May overlap the
+ * notes/sidebar column; character footprint stays on-screen.
+ */
 function clampClippyPosition(containerWidth, containerHeight, groupWidth, groupHeight, x, y) {
-  if (isPhoneContainer(containerWidth)) {
-    const extraW = Math.max(0, groupWidth - CLIPPY_PX)
-    const extraH = Math.max(0, groupHeight - CLIPPY_PX)
-    return {
-      x: clamp(x, -extraW, Math.max(-extraW, containerWidth - groupWidth)),
-      y: clamp(y, -extraH, Math.max(-extraH, containerHeight - groupHeight)),
-    }
-  }
-
+  const extraW = Math.max(0, groupWidth - CLIPPY_PX)
+  const extraH = Math.max(0, groupHeight - CLIPPY_PX)
+  // Allow balloon/UI to hang past edges a bit, but keep the figure visible.
   return {
-    x: clamp(x, 0, maxClippyX(containerWidth, groupWidth)),
-    y: clamp(y, 0, Math.max(0, containerHeight - groupHeight)),
+    x: clamp(x, -extraW, Math.max(-extraW, containerWidth - CLIPPY_PX)),
+    y: clamp(y, -extraH, Math.max(-extraH, containerHeight - CLIPPY_PX)),
   }
 }
 
-function ClippyBalloon({ items, onNavigate, onClose, onShuffleLook, ignoreClicksUntilRef }) {
+function ClippyBalloon({
+  items,
+  onNavigate,
+  onClose,
+  onHideToTray,
+  onShuffleLook,
+  ignoreClicksUntilRef,
+}) {
   function swallowOpeningClick(event) {
     if (Date.now() >= ignoreClicksUntilRef.current) return
     event.preventDefault()
@@ -149,9 +155,12 @@ function ClippyBalloon({ items, onNavigate, onClose, onShuffleLook, ignoreClicks
           ))}
         </ul>
       </nav>
-      <p className="mt-1 border-t border-black/30 pt-1">
+      <p className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 border-t border-black/30 pt-1">
         <button type="button" onClick={onShuffleLook} className="xp-clippy-link">
           Try a different assistant look
+        </button>
+        <button type="button" onClick={onHideToTray} className="xp-clippy-link">
+          Hide to tray
         </button>
       </p>
       <div className="xp-clippy-tail" aria-hidden />
@@ -166,6 +175,8 @@ function ClippyBalloon({ items, onNavigate, onClose, onShuffleLook, ignoreClicks
 export default function DesktopClippy() {
   const navigate = useNavigate()
   const location = useLocation()
+  const clippyInTray = useShellStore((s) => s.clippyInTray)
+  const setClippyInTray = useShellStore((s) => s.setClippyInTray)
   const boundsRef = useRef(null)
   const groupRef = useRef(null)
   const dragRef = useRef(null)
@@ -321,7 +332,13 @@ export default function DesktopClippy() {
     dragRef.current = null
   }
 
-  if (!src) return null
+  if (!src || clippyInTray) return null
+
+  const hideToTray = () => {
+    setBalloonOpen(false)
+    setPhoneExpanded(false)
+    setClippyInTray(true)
+  }
 
   return (
     <div
@@ -351,19 +368,33 @@ export default function DesktopClippy() {
               setPhoneExpanded(false)
               setBalloonOpen(false)
             }}
+            onHideToTray={hideToTray}
             onShuffleLook={shuffleClippyLook}
             ignoreClicksUntilRef={ignoreBalloonClicksUntilRef}
           />
         ) : null}
         <div
           role="presentation"
-          className="pointer-events-auto shrink-0 cursor-grab touch-none select-none active:cursor-grabbing"
+          className="pointer-events-auto relative shrink-0 cursor-grab touch-none select-none active:cursor-grabbing"
           style={{ width: CLIPPY_PX, height: CLIPPY_PX }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
+          <button
+            type="button"
+            aria-label="Hide Clippy to system tray"
+            title="Hide to tray"
+            className="absolute -right-1 -top-1 z-[1] flex h-5 w-5 items-center justify-center border border-black bg-[#ece9d8] text-[11px] leading-none text-black hover:bg-[#c42b1c] hover:text-white"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              hideToTray()
+            }}
+          >
+            ×
+          </button>
           <img
             src={src}
             alt=""

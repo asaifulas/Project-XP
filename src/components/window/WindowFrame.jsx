@@ -228,8 +228,13 @@ export default function WindowFrame({
   }, [program])
 
   useEffect(() => {
-    if (!allowMaximize && isMaximized) setIsMaximized(false)
-  }, [allowMaximize, isMaximized])
+    if (!allowMaximize) {
+      setIsMaximized(false)
+      return
+    }
+    if (!program || typeof program.maximized !== 'boolean') return
+    setIsMaximized(Boolean(program.maximized))
+  }, [allowMaximize, program?.maximized])
 
   useEffect(() => {
     if (!titleMenu) return
@@ -281,13 +286,17 @@ export default function WindowFrame({
 
   function handleToggleMaximize() {
     if (!allowMaximize) return
-    setIsMaximized((v) => !v)
-    setIsMinimized(false)
-    upsertProgram({
-      id: pid,
-      title,
-      active: true,
-      minimized: false,
+    setIsMaximized((v) => {
+      const next = !v
+      setIsMinimized(false)
+      upsertProgram({
+        id: pid,
+        title,
+        active: true,
+        minimized: false,
+        maximized: next,
+      })
+      return next
     })
   }
 
@@ -372,6 +381,10 @@ export default function WindowFrame({
   const phoneFillClasses =
     'fixed inset-x-0 top-0 m-0 flex !h-[calc(100svh-30px)] !max-h-[calc(100svh-30px)] !w-full !max-w-none flex-col rounded-none border-x-0 border-t-0 border-b-0'
   const fillsViewport = isPhone || (isMaximized && !isFrameless && allowMaximize)
+  /** Beat restored `h-[min(560px,…)]` / `w-[min(720px,…)]` from app className (e.g. Paint). */
+  const fillsViewportForceSize = fillsViewport
+    ? '!h-[calc(100svh-30px)] !max-h-[calc(100svh-30px)] !w-full !max-w-none'
+    : ''
 
   const hasExplicitWidthClass =
     /\bw-/.test(className) || /\bmax-w-/.test(className) || /\bmin-w-/.test(className)
@@ -411,13 +424,13 @@ export default function WindowFrame({
           // Custom size overrides Tailwind w-/h- from className / standard frame.
           Number.isFinite(frameW) || Number.isFinite(frameH) ? 'max-w-none' : '',
           className,
-          fillsViewport ? '!w-full !max-w-none' : '',
+          fillsViewportForceSize,
         ]
           .filter(Boolean)
           .join(' ')}
         style={
           fillsViewport
-            ? undefined
+            ? { width: '100%', height: 'calc(100svh - 30px)', maxHeight: 'calc(100svh - 30px)' }
             : {
                 transform: `translate(${liveX}px, ${liveY}px)`,
                 ...(Number.isFinite(frameW) ? { width: frameW } : null),

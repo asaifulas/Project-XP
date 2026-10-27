@@ -6,6 +6,7 @@ export default function TaskbarProgramButton({
   active,
   minimized,
   onActivate,
+  onContextMenu,
 }) {
   return (
     <button
@@ -16,6 +17,7 @@ export default function TaskbarProgramButton({
         minimized ? 'opacity-70' : '',
       ].join(' ')}
       onClick={onActivate}
+      onContextMenu={onContextMenu}
       title={title}
     >
       {iconSrc ? (
