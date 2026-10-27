@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   airbrushDots,
+  clampTextSize,
   clampZoom,
+  DEFAULT_TEXT_SIZE,
   fitZoomForViewport,
   floodFill,
   hexToRgba,
+  MAX_TEXT_SIZE,
+  MIN_TEXT_SIZE,
   pourFill,
   rgbaToHex,
+  scrollForZoomAtPoint,
 } from './paintTools.js'
 
 function pixel(img, x, y) {
@@ -171,5 +176,38 @@ describe('zoom helpers', () => {
     expect(z).toBeGreaterThanOrEqual(0.25)
     expect(595 * z).toBeLessThanOrEqual(360)
     expect(842 * z).toBeLessThanOrEqual(520)
+  })
+
+  it('clamps text size', () => {
+    expect(clampTextSize(0)).toBe(MIN_TEXT_SIZE)
+    expect(clampTextSize(999)).toBe(MAX_TEXT_SIZE)
+    expect(clampTextSize('nope')).toBe(DEFAULT_TEXT_SIZE)
+    expect(clampTextSize(24.6)).toBe(25)
+  })
+
+  it('keeps the focus content point under the same viewport pixel after zoom', () => {
+    const pad = 5
+    const fromZoom = 1
+    const toZoom = 2
+    const scrollLeft = 40
+    const scrollTop = 10
+    const viewportX = 100
+    const viewportY = 80
+    const next = scrollForZoomAtPoint({
+      scrollLeft,
+      scrollTop,
+      viewportX,
+      viewportY,
+      canvasW: 640,
+      canvasH: 480,
+      fromZoom,
+      toZoom,
+      padX: pad,
+      padY: pad,
+    })
+    const oldContentX = scrollLeft + viewportX
+    const oldRel = oldContentX - pad
+    const newContentX = next.scrollLeft + viewportX
+    expect(newContentX - pad).toBeCloseTo(oldRel * (toZoom / fromZoom), 5)
   })
 })

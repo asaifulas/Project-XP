@@ -263,10 +263,21 @@ export const TOOLS = /** @type {const} */ ([
   'fill',
   'eyedropper',
   'magnify',
+  'hand',
+  'text',
   'line',
   'rect',
   'ellipse',
 ])
+
+/** Offset from scroll content origin to the canvas bitmap (p-1 + 1px border). */
+export const CANVAS_SCROLL_PAD = 5
+
+/** Paint text tool — same XP Tahoma face already loaded for the shell. */
+export const PAINT_TEXT_FONT = '"XP Tahoma", Tahoma, "MS Sans Serif", sans-serif'
+export const MIN_TEXT_SIZE = 8
+export const MAX_TEXT_SIZE = 128
+export const DEFAULT_TEXT_SIZE = 24
 
 /** Quick picks in the tool well. */
 export const STROKE_PRESETS = [1, 2, 3, 4, 5, 8, 12, 16, 24]
@@ -285,6 +296,42 @@ export function clampStrokeSize(value) {
   const n = Math.round(Number(value))
   if (!Number.isFinite(n)) return MIN_STROKE
   return Math.min(MAX_STROKE, Math.max(MIN_STROKE, n))
+}
+
+/**
+ * Clamp Paint text size (px).
+ * @param {unknown} value
+ */
+export function clampTextSize(value) {
+  const n = Math.round(Number(value))
+  if (!Number.isFinite(n)) return DEFAULT_TEXT_SIZE
+  return Math.min(MAX_TEXT_SIZE, Math.max(MIN_TEXT_SIZE, n))
+}
+
+/**
+ * Draw multi-line text onto a canvas context (top-left baseline).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} text
+ * @param {number} x
+ * @param {number} y
+ * @param {{ size: number, color: string, fontFamily?: string }} opts
+ */
+export function drawPaintText(ctx, text, x, y, opts) {
+  const raw = String(text ?? '')
+  if (!raw) return
+  const size = clampTextSize(opts.size)
+  const family = opts.fontFamily ?? PAINT_TEXT_FONT
+  const lines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+  ctx.save()
+  ctx.font = `${size}px ${family}`
+  ctx.fillStyle = opts.color
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+  const lineHeight = Math.round(size * 1.2)
+  for (let i = 0; i < lines.length; i += 1) {
+    ctx.fillText(lines[i], x, y + i * lineHeight)
+  }
+  ctx.restore()
 }
 
 /**
@@ -310,6 +357,53 @@ export function fitZoomForViewport(canvasW, canvasH, viewW, viewH, pad = 24) {
   const availW = Math.max(1, viewW - pad)
   const availH = Math.max(1, viewH - pad)
   return clampZoom(Math.min(availW / canvasW, availH / canvasH))
+}
+
+/**
+ * Keep the content point under a viewport focus fixed when zoom changes.
+ * @param {{
+ *   scrollLeft: number,
+ *   scrollTop: number,
+ *   viewportX: number,
+ *   viewportY: number,
+ *   canvasW: number,
+ *   canvasH: number,
+ *   fromZoom: number,
+ *   toZoom: number,
+ *   padX?: number,
+ *   padY?: number,
+ * }} args
+ */
+export function scrollForZoomAtPoint({
+  scrollLeft,
+  scrollTop,
+  viewportX,
+  viewportY,
+  canvasW,
+  canvasH,
+  fromZoom,
+  toZoom,
+  padX = CANVAS_SCROLL_PAD,
+  padY = CANVAS_SCROLL_PAD,
+}) {
+  const from = fromZoom > 0 ? fromZoom : 1
+  const to = toZoom > 0 ? toZoom : 1
+  const contentX = scrollLeft + viewportX
+  const contentY = scrollTop + viewportY
+  const relX = contentX - padX
+  const relY = contentY - padY
+  const scale = to / from
+  // Clamp focus to the canvas box so padding outside the bitmap does not explode scroll.
+  const maxRelX = Math.max(0, canvasW * from)
+  const maxRelY = Math.max(0, canvasH * from)
+  const cx = Math.min(maxRelX, Math.max(0, relX))
+  const cy = Math.min(maxRelY, Math.max(0, relY))
+  const newContentX = padX + cx * scale
+  const newContentY = padY + cy * scale
+  return {
+    scrollLeft: newContentX - viewportX,
+    scrollTop: newContentY - viewportY,
+  }
 }
 
 /**

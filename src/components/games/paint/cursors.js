@@ -52,6 +52,16 @@ const MAGNIFY = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" 
   <path d="M13 9v8M9 13h8" stroke="#222" stroke-width="1.5"/>
 </svg>`
 
+const HAND = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <path d="M11 14V8.5a1.5 1.5 0 0 1 3 0V14M14 13V7a1.5 1.5 0 0 1 3 0v7M17 12.5V8a1.5 1.5 0 0 1 3 0v8M20 13v-2a1.5 1.5 0 0 1 3 0v7.5c0 4-2.5 7-7 7h-1c-3.5 0-6-2-7.5-4.5L6 16.5a1.6 1.6 0 0 1 2.7-1.7L11 18"
+    fill="#f4e4c8" stroke="#333" stroke-width="1.2" stroke-linejoin="round"/>
+</svg>`
+
+const TEXT = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <path d="M6 6h20v4h-8v16h-4V10H6z" fill="#222"/>
+  <path d="M8 8h16v2H18v14h-4V10H8z" fill="#eee"/>
+</svg>`
+
 const LINE = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
   <path d="M4 28L28 4" stroke="#000" stroke-width="2"/>
   <circle cx="4" cy="28" r="2" fill="#000"/>
@@ -76,6 +86,8 @@ export const TOOL_CURSORS = {
   fill: cursorUrl(FILL, 8, 24, 'cell'),
   eyedropper: cursorUrl(DROPPER, 8, 24, 'crosshair'),
   magnify: cursorUrl(MAGNIFY, 13, 13, 'zoom-in'),
+  hand: cursorUrl(HAND, 16, 16, 'grab'),
+  text: cursorUrl(TEXT, 4, 4, 'text'),
   line: cursorUrl(LINE, 4, 28, 'crosshair'),
   rect: cursorUrl(RECT, 6, 8, 'crosshair'),
   ellipse: cursorUrl(ELLIPSE, 15, 7, 'crosshair'),

@@ -17,23 +17,31 @@ import {
 } from './eduTemplates.js'
 import {
   CANVAS_H,
+  CANVAS_SCROLL_PAD,
   CANVAS_W,
   DEFAULT_COLORS,
+  DEFAULT_TEXT_SIZE,
   MAX_CANVAS,
   MAX_STROKE,
+  MAX_TEXT_SIZE,
   MAX_UNDO,
   MAX_ZOOM,
   MIN_CANVAS,
   MIN_STROKE,
+  MIN_TEXT_SIZE,
   MIN_ZOOM,
+  PAINT_TEXT_FONT,
   TOOLS,
   ZOOM_PRESETS,
   clampStrokeSize,
+  clampTextSize,
   clampZoom,
+  drawPaintText,
   fitZoomForViewport,
   hexToRgba,
   pourFill,
   rgbaToHex,
+  scrollForZoomAtPoint,
   stampAirbrush,
 } from './paintTools.js'
 import { saveCanvasPng } from './savePng.js'
@@ -67,11 +75,18 @@ export default function PaintApp({ keyboardActive = true }) {
   )
   const touchPointsRef = useRef(/** @type {Map<number, { x: number, y: number }>} */ (new Map()))
   const pinchRef = useRef(
-    /** @type {null | { startDist: number, startZoom: number }} */ (null),
+    /** @type {null | { startDist: number, startZoom: number, fx: number, fy: number, midX: number, midY: number }} */ (
+      null
+    ),
+  )
+  const pendingScrollRef = useRef(/** @type {null | { scrollLeft: number, scrollTop: number }} */ (null))
+  const panRef = useRef(
+    /** @type {null | { startX: number, startY: number, scrollLeft: number, scrollTop: number }} */ (null),
   )
   const resizeDragRef = useRef(
     /** @type {null | { edge: string, startX: number, startY: number, origW: number, origH: number }} */ (null),
   )
+  const zoomRef = useRef(1)
 
   const [tool, setTool] = useState(/** @type {(typeof TOOLS)[number]} */ ('pencil'))
   const [fg, setFg] = useState('#000000')
@@ -83,6 +98,12 @@ export default function PaintApp({ keyboardActive = true }) {
   const [brushSize, setBrushSize] = useState(8)
   const [airbrushSize, setAirbrushSize] = useState(22)
   const [eraserSize, setEraserSize] = useState(18)
+  const [textSize, setTextSize] = useState(DEFAULT_TEXT_SIZE)
+  /** In-place text editor over the canvas (canvas pixel coords). */
+  const [textEdit, setTextEdit] = useState(
+    /** @type {null | { x: number, y: number, value: string }} */ (null),
+  )
+  const textInputRef = useRef(/** @type {HTMLTextAreaElement | null} */ (null))
   const [zoom, setZoom] = useState(1)
   const [canvasW, setCanvasW] = useState(CANVAS_W)
   const [canvasH, setCanvasH] = useState(CANVAS_H)
@@ -94,8 +115,17 @@ export default function PaintApp({ keyboardActive = true }) {
   const [attrsOpen, setAttrsOpen] = useState(false)
   const [attrW, setAttrW] = useState(String(CANVAS_W))
   const [attrH, setAttrH] = useState(String(CANVAS_H))
-  /** Touch/finger paints on contact — like a real brush on canvas (no PC click model). */
-  const [mobileMode, setMobileMode] = useState(() => preferTouchDrawing())
+  /**
+   * Explicit Paint chrome: mobile (tool strip under canvas, long sliders) vs desktop (classic left well).
+   * Independent of viewport width so iPad / large screens can force either.
+   */
+  const [uiLayout, setUiLayout] = useState(/** @type {'mobile' | 'desktop'} */ (
+    preferTouchDrawing() ? 'mobile' : 'desktop'
+  ))
+  const useMobileLayout = uiLayout === 'mobile'
+  /** Touch/finger paints on contact when using mobile layout. */
+  const mobileMode = useMobileLayout
+  zoomRef.current = zoom
 
   /** Edu tracing: kids learn letters/shapes on A4 with optional magnetic snap. */
   const [eduLineMode, setEduLineMode] = useState(/** @type {'magnetic' | 'plain'} */ ('magnetic'))
@@ -220,15 +250,15 @@ export default function PaintApp({ keyboardActive = true }) {
         setAttrW(String(EDU_A4_W))
         setAttrH(String(EDU_A4_H))
         setTool('brush')
-        if (isPhone || preferTouchDrawing()) {
-          setMobileMode(true)
+        if (useMobileLayout || isPhone || preferTouchDrawing()) {
+          setUiLayout('mobile')
           setBrushSize((s) => Math.max(s, 8))
           setPencilSize((s) => Math.max(s, 3))
         } else {
           setBrushSize((s) => Math.max(s, 6))
         }
-        // Phone Edu: fit whole A4; desktop stays 100%.
-        if (!(isPhone || preferTouchDrawing())) setZoom(1)
+        // Mobile Edu: fit whole A4; desktop stays 100%.
+        if (!(useMobileLayout || isPhone || preferTouchDrawing())) setZoom(1)
         setFileName(`edu-${ready.label}`)
         setEduPaintGen((n) => n + 1)
         setStatus(
@@ -255,6 +285,7 @@ export default function PaintApp({ keyboardActive = true }) {
       isPhone,
       pushUndo,
       syncOverlaySize,
+      useMobileLayout,
     ],
   )
 
@@ -385,6 +416,49 @@ export default function PaintApp({ keyboardActive = true }) {
     [tool],
   )
 
+  const textEditRef = useRef(textEdit)
+  textEditRef.current = textEdit
+
+  const commitTextEdit = useCallback(
+    (edit) => {
+      const target = edit ?? textEditRef.current
+      if (!target) return
+      const value = target.value
+      setTextEdit(null)
+      if (!value.trim()) {
+        setStatus('Text cancelled')
+        return
+      }
+      const ctx = getCtx()
+      if (!ctx) return
+      pushUndo()
+      drawPaintText(ctx, value, target.x, target.y, { size: textSize, color: fg })
+      setStatus('Text placed')
+    },
+    [fg, getCtx, pushUndo, textSize],
+  )
+
+  const cancelTextEdit = useCallback(() => {
+    setTextEdit(null)
+    setStatus('Text cancelled')
+  }, [])
+
+  useEffect(() => {
+    if (!textEdit) return undefined
+    const id = window.requestAnimationFrame(() => {
+      textInputRef.current?.focus()
+    })
+    return () => window.cancelAnimationFrame(id)
+    // Focus when a new placement opens (position identity), not on each keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textEdit?.x, textEdit?.y])
+
+  useEffect(() => {
+    if (tool !== 'text' && textEditRef.current) {
+      commitTextEdit(textEditRef.current)
+    }
+  }, [commitTextEdit, tool])
+
   const strokeLine = useCallback(
     (ctx, from, to, opts = {}) => {
       const drawTool = opts.drawTool ?? 'pencil'
@@ -421,21 +495,16 @@ export default function PaintApp({ keyboardActive = true }) {
     [bg, fg, widthForDrawTool],
   )
 
-  const enableMobileMode = useCallback((on) => {
-    setMobileMode(on)
-    if (on) {
+  const setPaintLayout = useCallback((layout) => {
+    const next = layout === 'mobile' ? 'mobile' : 'desktop'
+    setUiLayout(next)
+    if (next === 'mobile') {
       setBrushSize((s) => Math.max(s, 6))
-      setStatus('Mobile mode — touch canvas to paint (lift finger to stop)')
+      setStatus('Mobile layout — touch to paint · pinch to zoom · Hand tool to pan')
     } else {
-      setStatus('PC mode — click and drag to draw')
+      setStatus('Desktop layout — click and drag to draw')
     }
   }, [])
-
-  useEffect(() => {
-    if (isPhone && !mobileMode) {
-      // Keep preference if user turned it off; only auto-on once via initial state.
-    }
-  }, [isPhone, mobileMode])
 
   const drawShape = useCallback(
     (ctx, shape, from, to) => {
@@ -562,11 +631,38 @@ export default function PaintApp({ keyboardActive = true }) {
     [bg, getCtx, pushUndo, syncOverlaySize],
   )
 
-  const applyZoom = useCallback((next, announce = true) => {
-    const z = clampZoom(next)
-    setZoom(z)
-    if (announce) setStatus(`Zoom ${z}x`)
-  }, [])
+  const applyZoom = useCallback(
+    (next, announce = true, focusClient = null) => {
+      const fromZoom = zoomRef.current
+      const z = clampZoom(next)
+      const scroller = scrollRef.current
+      if (scroller && focusClient && Number.isFinite(focusClient.x) && Number.isFinite(focusClient.y)) {
+        const rect = scroller.getBoundingClientRect()
+        pendingScrollRef.current = scrollForZoomAtPoint({
+          scrollLeft: scroller.scrollLeft,
+          scrollTop: scroller.scrollTop,
+          viewportX: focusClient.x - rect.left,
+          viewportY: focusClient.y - rect.top,
+          canvasW,
+          canvasH,
+          fromZoom,
+          toZoom: z,
+        })
+      }
+      setZoom(z)
+      if (announce) setStatus(`Zoom ${z}x`)
+    },
+    [canvasH, canvasW],
+  )
+
+  useLayoutEffect(() => {
+    const pending = pendingScrollRef.current
+    const scroller = scrollRef.current
+    if (!pending || !scroller) return
+    pendingScrollRef.current = null
+    scroller.scrollLeft = Math.max(0, pending.scrollLeft)
+    scroller.scrollTop = Math.max(0, pending.scrollTop)
+  }, [zoom])
 
   const fitCanvasInView = useCallback(
     (announce = true) => {
@@ -582,11 +678,11 @@ export default function PaintApp({ keyboardActive = true }) {
     [applyZoom, canvasH, canvasW],
   )
 
-  // Edu on phone/tablet: fit the whole A4 after the viewport lays out.
+  // Edu on mobile layout / phone: fit the whole A4 after the viewport lays out.
   useLayoutEffect(() => {
-    if (!eduTemplateId || !(isPhone || preferTouchDrawing())) return
+    if (!eduTemplateId || !(useMobileLayout || isPhone || preferTouchDrawing())) return
     fitCanvasInView(false)
-  }, [eduPaintGen, eduTemplateId, fitCanvasInView, isPhone])
+  }, [eduPaintGen, eduTemplateId, fitCanvasInView, isPhone, useMobileLayout])
 
   const updateBrushPreviewFromEvent = useCallback(
     (event) => {
@@ -623,16 +719,47 @@ export default function PaintApp({ keyboardActive = true }) {
       pinchRef.current = null
       return
     }
+    const midX = (pts[0].x + pts[1].x) / 2
+    const midY = (pts[0].y + pts[1].y) / 2
     const dist = touchDistance(pts[0], pts[1])
+    const scroller = scrollRef.current
     if (!pinchRef.current) {
-      pinchRef.current = { startDist: dist, startZoom: zoom }
+      let fx = 0.5
+      let fy = 0.5
+      if (scroller) {
+        const rect = scroller.getBoundingClientRect()
+        const contentX = scroller.scrollLeft + (midX - rect.left)
+        const contentY = scroller.scrollTop + (midY - rect.top)
+        const z0 = zoomRef.current || 1
+        fx = canvasW > 0 ? (contentX - CANVAS_SCROLL_PAD) / (canvasW * z0) : 0.5
+        fy = canvasH > 0 ? (contentY - CANVAS_SCROLL_PAD) / (canvasH * z0) : 0.5
+      }
+      pinchRef.current = {
+        startDist: dist,
+        startZoom: zoomRef.current,
+        fx: Math.min(1, Math.max(0, fx)),
+        fy: Math.min(1, Math.max(0, fy)),
+        midX,
+        midY,
+      }
       drawingRef.current = false
+      panRef.current = null
       return
     }
+    pinchRef.current = { ...pinchRef.current, midX, midY }
     if (pinchRef.current.startDist < 8) return
     const next = pinchRef.current.startZoom * (dist / pinchRef.current.startDist)
-    applyZoom(next, false)
-  }, [applyZoom, zoom])
+    const z = clampZoom(next)
+    if (scroller) {
+      const rect = scroller.getBoundingClientRect()
+      const { fx, fy } = pinchRef.current
+      pendingScrollRef.current = {
+        scrollLeft: CANVAS_SCROLL_PAD + fx * canvasW * z - (midX - rect.left),
+        scrollTop: CANVAS_SCROLL_PAD + fy * canvasH * z - (midY - rect.top),
+      }
+    }
+    setZoom(z)
+  }, [canvasH, canvasW])
 
   const onPointerDown = useCallback(
     (event) => {
@@ -670,12 +797,45 @@ export default function PaintApp({ keyboardActive = true }) {
       const pt = canvasPoint(event)
       setCoords(`${Math.floor(pt.x)}, ${Math.floor(pt.y)}`)
 
-      if (tool === 'magnify') {
+      if (tool === 'hand') {
+        const scroller = scrollRef.current
+        if (!scroller) return
+        event.preventDefault()
+        panRef.current = {
+          startX: event.clientX,
+          startY: event.clientY,
+          scrollLeft: scroller.scrollLeft,
+          scrollTop: scroller.scrollTop,
+        }
+        drawingRef.current = true
+        setStatus('Hand — drag to pan')
+        return
+      }
+
+      if (tool === 'text') {
         if (event.button === 2) {
           event.preventDefault()
-          applyZoom(zoom / 1.5)
+          return
+        }
+        if (!useMobilePaint && event.button !== 0 && event.button !== -1) return
+        event.preventDefault()
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        if (textEdit) commitTextEdit(textEdit)
+        setTextEdit({ x: Math.floor(pt.x), y: Math.floor(pt.y), value: '' })
+        setStatus('Type text — Ctrl+Enter places · Esc cancels · click canvas to place')
+        activePointerIdRef.current = null
+        return
+      }
+
+      if (tool === 'magnify') {
+        const focus = { x: event.clientX, y: event.clientY }
+        if (event.button === 2) {
+          event.preventDefault()
+          applyZoom(zoom / 1.5, true, focus)
         } else if (event.button === 0 || useMobilePaint) {
-          applyZoom(zoom * 1.5)
+          applyZoom(zoom * 1.5, true, focus)
         }
         return
       }
@@ -730,7 +890,12 @@ export default function PaintApp({ keyboardActive = true }) {
       pushUndo()
       drawingRef.current = true
       const startPt =
-        tool === 'eraser' || tool === 'fill' || tool === 'eyedropper' || tool === 'magnify'
+        tool === 'eraser' ||
+        tool === 'fill' ||
+        tool === 'eyedropper' ||
+        tool === 'magnify' ||
+        tool === 'hand' ||
+        tool === 'text'
           ? pt
           : snapEduPoint(pt)
       startRef.current = startPt
@@ -753,6 +918,7 @@ export default function PaintApp({ keyboardActive = true }) {
     [
       applyZoom,
       canvasPoint,
+      commitTextEdit,
       fg,
       getCtx,
       mobileMode,
@@ -760,6 +926,7 @@ export default function PaintApp({ keyboardActive = true }) {
       snapEduPoint,
       strokeLine,
       syncPinchFromTouches,
+      textEdit,
       tool,
       updateBrushPreviewFromEvent,
       zoom,
@@ -780,6 +947,18 @@ export default function PaintApp({ keyboardActive = true }) {
       if (activePointerIdRef.current !== null && event.pointerId !== activePointerIdRef.current) {
         return
       }
+
+      if (tool === 'hand' && panRef.current && drawingRef.current) {
+        const scroller = scrollRef.current
+        if (!scroller) return
+        event.preventDefault()
+        const dx = event.clientX - panRef.current.startX
+        const dy = event.clientY - panRef.current.startY
+        scroller.scrollLeft = panRef.current.scrollLeft - dx
+        scroller.scrollTop = panRef.current.scrollTop - dy
+        return
+      }
+
       updateBrushPreviewFromEvent(event)
       const pt = canvasPoint(event)
       setCoords(`${Math.floor(pt.x)}, ${Math.floor(pt.y)}`)
@@ -834,10 +1013,12 @@ export default function PaintApp({ keyboardActive = true }) {
       }
       if (!drawingRef.current) {
         activePointerIdRef.current = null
+        panRef.current = null
         return
       }
       drawingRef.current = false
       activePointerIdRef.current = null
+      panRef.current = null
       const ctx = getCtx()
       const pt = event ? canvasPoint(event) : lastRef.current
       if (
@@ -851,7 +1032,9 @@ export default function PaintApp({ keyboardActive = true }) {
       }
       startRef.current = null
       lastRef.current = null
-      if (mobileMode) setStatus('Mobile mode — touch to paint · pinch to zoom')
+      if (mobileMode) {
+        setStatus('Mobile layout — touch to paint · pinch to zoom · Hand tool to pan')
+      }
     },
     [canvasPoint, clearOverlay, drawShape, getCtx, mobileMode, tool],
   )
@@ -917,6 +1100,8 @@ export default function PaintApp({ keyboardActive = true }) {
     { id: 'fill', title: 'Fill With Color', icon: '▤' },
     { id: 'eyedropper', title: 'Pick Color', icon: '⌖' },
     { id: 'magnify', title: 'Magnifier', icon: '🔍' },
+    { id: 'hand', title: 'Hand (pan)', icon: '✋' },
+    { id: 'text', title: 'Text', icon: 'T' },
     { id: 'line', title: 'Line', icon: '/' },
     { id: 'rect', title: 'Rectangle', icon: '□' },
     { id: 'ellipse', title: 'Ellipse', icon: '○' },
@@ -955,6 +1140,17 @@ export default function PaintApp({ keyboardActive = true }) {
         { label: 'Zoom 400%', action: () => applyZoom(4) },
         { label: 'Zoom 600%', action: () => applyZoom(6) },
         { label: 'Zoom 800%', action: () => applyZoom(8) },
+        { separator: true },
+        {
+          label: 'Mobile layout',
+          checked: useMobileLayout,
+          action: () => setPaintLayout('mobile'),
+        },
+        {
+          label: 'Desktop layout',
+          checked: !useMobileLayout,
+          action: () => setPaintLayout('desktop'),
+        },
       ],
     },
     {
@@ -1155,28 +1351,41 @@ export default function PaintApp({ keyboardActive = true }) {
 
   const displayW = canvasW * zoom
   const displayH = canvasH * zoom
-  const showStrokeOptions = tool !== 'magnify' && tool !== 'fill' && tool !== 'eyedropper'
-  const showZoomOptions = tool === 'magnify' || isPhone
+  const showTextOptions = tool === 'text'
+  const showStrokeOptions =
+    tool !== 'magnify' &&
+    tool !== 'fill' &&
+    tool !== 'eyedropper' &&
+    tool !== 'hand' &&
+    tool !== 'text'
+  const showZoomOptions = tool === 'magnify'
   const stampTool =
     tool === 'pencil' || tool === 'brush' || tool === 'airbrush' || tool === 'eraser'
       ? tool
       : tool === 'line'
         ? 'pencil'
-        : mobileMode
+        : mobileMode && tool !== 'hand' && tool !== 'magnify' && tool !== 'text'
           ? 'brush'
           : null
   const brushDiameterCss = stampTool ? widthForDrawTool(stampTool) * zoom : 0
-  const canvasCursor = stampTool
-    ? cursorForTool(stampTool, {
-        widthCss: Math.max(6, brushDiameterCss),
-        erase: stampTool === 'eraser',
-      })
-    : cursorForTool(tool)
-  const toolBtnClass = isPhone
+  const canvasCursor =
+    tool === 'hand'
+      ? panRef.current
+        ? 'grabbing'
+        : cursorForTool('hand')
+      : tool === 'text'
+        ? cursorForTool('text')
+        : stampTool
+          ? cursorForTool(stampTool, {
+              widthCss: Math.max(6, brushDiameterCss),
+              erase: stampTool === 'eraser',
+            })
+          : cursorForTool(tool)
+  const toolBtnClass = useMobileLayout
     ? 'flex h-8 w-8 shrink-0 items-center justify-center border text-[13px] leading-none'
     : 'flex h-[26px] w-[26px] items-center justify-center border text-[12px] leading-none'
-  const paletteCell = isPhone ? 16 : 15
-  const fgBgBox = isPhone ? 32 : 34
+  const paletteCell = useMobileLayout ? 16 : 15
+  const fgBgBox = useMobileLayout ? 32 : 34
 
   return (
     <div
@@ -1184,7 +1393,7 @@ export default function PaintApp({ keyboardActive = true }) {
       onClick={() => setMenuOpen(null)}
     >
       <div
-        className="xp-menubar relative shrink-0"
+        className="xp-menubar relative flex shrink-0 items-center gap-1"
         onClick={(event) => event.stopPropagation()}
       >
         {menus.map((menu) => (
@@ -1209,6 +1418,30 @@ export default function PaintApp({ keyboardActive = true }) {
             ) : null}
           </div>
         ))}
+        <div className="ml-auto flex items-center gap-0.5 pr-1">
+          <button
+            type="button"
+            className={`xp-button px-1.5 py-0 text-[10px] ${
+              useMobileLayout ? 'shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff]' : ''
+            }`}
+            aria-pressed={useMobileLayout}
+            title="Mobile Paint layout (tools under canvas, longer sliders)"
+            onClick={() => setPaintLayout('mobile')}
+          >
+            Mobile
+          </button>
+          <button
+            type="button"
+            className={`xp-button px-1.5 py-0 text-[10px] ${
+              !useMobileLayout ? 'shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff]' : ''
+            }`}
+            aria-pressed={!useMobileLayout}
+            title="Desktop Paint layout (classic left tool well)"
+            onClick={() => setPaintLayout('desktop')}
+          >
+            Desktop
+          </button>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -1222,17 +1455,17 @@ export default function PaintApp({ keyboardActive = true }) {
         />
       </div>
 
-      <div className={`flex min-h-0 flex-1 ${isPhone ? 'flex-col' : 'flex-row'}`}>
+      <div className={`flex min-h-0 flex-1 ${useMobileLayout ? 'flex-col' : 'flex-row'}`}>
         <div
           className={`flex shrink-0 border-[#808080] bg-[#c0c0c0] ${
-            isPhone
+            useMobileLayout
               ? 'order-2 flex-col gap-0.5 border-t px-1 py-0.5'
               : 'w-[58px] flex-col border-r'
           }`}
         >
           <div
             className={
-              isPhone
+              useMobileLayout
                 ? 'flex flex-row items-center gap-0.5 overflow-x-auto'
                 : `m-0.5 grid grid-cols-2 gap-0 border border-[#808080] bg-[#c0c0c0] p-0.5`
             }
@@ -1257,10 +1490,14 @@ export default function PaintApp({ keyboardActive = true }) {
                 {t.icon === 'eraser' ? (
                   <span
                     className={`block rotate-[-20deg] border border-[#333] bg-[#f2d84a] shadow-[inset_-2px_0_0_#ffe566] ${
-                      isPhone ? 'h-2.5 w-4' : 'h-[10px] w-[14px]'
+                      useMobileLayout ? 'h-2.5 w-4' : 'h-[10px] w-[14px]'
                     }`}
                     aria-hidden
                   />
+                ) : t.id === 'text' ? (
+                  <span className="font-bold leading-none" aria-hidden>
+                    T
+                  </span>
                 ) : (
                   t.icon
                 )}
@@ -1270,17 +1507,17 @@ export default function PaintApp({ keyboardActive = true }) {
 
           <div
             className={`flex items-center justify-center gap-1 border border-[#808080] bg-[#c0c0c0] ${
-              isPhone
-                ? 'h-7 flex-row flex-nowrap px-1'
+              useMobileLayout
+                ? 'h-9 flex-row flex-nowrap px-1'
                 : 'mx-0.5 mb-0.5 min-h-[96px] w-[52px] flex-col p-1.5'
             }`}
             onClick={(event) => event.stopPropagation()}
           >
             {showZoomOptions ? (
               <div
-                className={`flex items-center gap-0.5 ${isPhone ? 'min-w-0 flex-1' : 'flex-col'}`}
+                className={`flex items-center gap-0.5 ${useMobileLayout ? 'min-w-0 flex-1' : 'flex-col'}`}
               >
-                {isPhone || tool === 'magnify' ? (
+                {useMobileLayout || tool === 'magnify' ? (
                   <>
                     <input
                       type="range"
@@ -1289,15 +1526,17 @@ export default function PaintApp({ keyboardActive = true }) {
                       step={0.05}
                       value={zoom}
                       onChange={(event) => applyZoom(Number(event.target.value))}
-                      className={`accent-[#000080] ${isPhone ? 'h-4 min-w-0 flex-1' : 'h-16 w-3'}`}
-                      style={isPhone ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
+                      className={`accent-[#000080] ${
+                        useMobileLayout ? 'h-5 min-w-[120px] flex-1' : 'h-16 w-3'
+                      }`}
+                      style={useMobileLayout ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
                       aria-label="Zoom"
                       title={`Zoom ${zoom}x`}
                     />
                     <button
                       type="button"
                       className={`shrink-0 border border-[#808080] bg-[#c0c0c0] px-1 text-[9px] font-bold leading-none shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] ${
-                        isPhone ? 'h-5' : 'w-10 py-1'
+                        useMobileLayout ? 'h-6' : 'w-10 py-1'
                       }`}
                       onClick={() => fitCanvasInView(true)}
                       title="Fit canvas in view"
@@ -1325,11 +1564,42 @@ export default function PaintApp({ keyboardActive = true }) {
                 )}
               </div>
             ) : null}
+            {showTextOptions ? (
+              <>
+                <div
+                  className={`flex shrink-0 items-center justify-center border border-[#808080] bg-white font-bold shadow-[inset_1px_1px_0_#fff] ${
+                    useMobileLayout ? 'h-6 w-6 text-[11px]' : 'h-10 w-10 text-[16px]'
+                  }`}
+                  style={{ color: fg, fontFamily: PAINT_TEXT_FONT }}
+                  title={`Text ${textSize}px`}
+                  aria-hidden
+                >
+                  A
+                </div>
+                <input
+                  type="range"
+                  min={MIN_TEXT_SIZE}
+                  max={MAX_TEXT_SIZE}
+                  value={textSize}
+                  onChange={(event) => {
+                    const next = clampTextSize(event.target.value)
+                    setTextSize(next)
+                    setStatus(`Text size: ${next}px`)
+                  }}
+                  className={`accent-[#000080] ${
+                    useMobileLayout ? 'h-5 min-w-[120px] flex-1' : 'h-16 w-3'
+                  }`}
+                  style={useMobileLayout ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
+                  aria-label="Text size"
+                />
+                <span className="shrink-0 text-[9px] tabular-nums text-black/70">{textSize}</span>
+              </>
+            ) : null}
             {showStrokeOptions ? (
               <>
                 <div
                   className={`flex shrink-0 items-center justify-center border border-[#808080] bg-white shadow-[inset_1px_1px_0_#fff] ${
-                    isPhone ? 'h-5 w-5' : 'h-10 w-10'
+                    useMobileLayout ? 'h-6 w-6' : 'h-10 w-10'
                   }`}
                   title={`${activeFreehandSize}px`}
                   aria-hidden
@@ -1337,8 +1607,14 @@ export default function PaintApp({ keyboardActive = true }) {
                   <span
                     className="block rounded-full"
                     style={{
-                      width: Math.min(isPhone ? 14 : 36, Math.max(2, activeFreehandSize * (isPhone ? 0.45 : 1))),
-                      height: Math.min(isPhone ? 14 : 36, Math.max(2, activeFreehandSize * (isPhone ? 0.45 : 1))),
+                      width: Math.min(
+                        useMobileLayout ? 14 : 36,
+                        Math.max(2, activeFreehandSize * (useMobileLayout ? 0.45 : 1)),
+                      ),
+                      height: Math.min(
+                        useMobileLayout ? 14 : 36,
+                        Math.max(2, activeFreehandSize * (useMobileLayout ? 0.45 : 1)),
+                      ),
                       background: tool === 'eraser' ? '#f2d84a' : fg,
                       border: tool === 'eraser' ? '1px solid #8a7a10' : '1px solid rgba(0,0,0,0.35)',
                       opacity: tool === 'airbrush' ? 0.55 : 1,
@@ -1351,14 +1627,16 @@ export default function PaintApp({ keyboardActive = true }) {
                   max={MAX_STROKE}
                   value={activeFreehandSize}
                   onChange={(event) => setActiveFreehandSize(event.target.value)}
-                  className={`accent-[#000080] ${isPhone ? 'h-4 min-w-[64px] flex-1' : 'h-16 w-3'}`}
-                  style={isPhone ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
+                  className={`accent-[#000080] ${
+                    useMobileLayout ? 'h-5 min-w-[120px] flex-1' : 'h-16 w-3'
+                  }`}
+                  style={useMobileLayout ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
                   aria-label="Tool size"
                 />
                 <span className="shrink-0 text-[9px] tabular-nums text-black/70">{activeFreehandSize}</span>
               </>
             ) : null}
-            {!showStrokeOptions && !showZoomOptions ? (
+            {!showStrokeOptions && !showZoomOptions && !showTextOptions ? (
               <span className="px-1 text-center text-[9px] text-black/50">—</span>
             ) : null}
           </div>
@@ -1366,7 +1644,7 @@ export default function PaintApp({ keyboardActive = true }) {
 
         <div
           ref={scrollRef}
-          className={`min-h-0 flex-1 overflow-auto bg-[#808080] ${isPhone ? 'order-1' : ''}`}
+          className={`min-h-0 flex-1 overflow-auto bg-[#808080] ${useMobileLayout ? 'order-1' : ''}`}
           style={{
             backgroundImage:
               'linear-gradient(45deg, #787878 25%, transparent 25%), linear-gradient(-45deg, #787878 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #787878 75%), linear-gradient(-45deg, transparent 75%, #787878 75%)',
@@ -1425,6 +1703,43 @@ export default function PaintApp({ keyboardActive = true }) {
                 />
               ) : null}
 
+              {textEdit ? (
+                <textarea
+                  ref={textInputRef}
+                  value={textEdit.value}
+                  rows={2}
+                  spellCheck={false}
+                  aria-label="Paint text"
+                  className="absolute z-[6] min-h-[1.2em] min-w-[4em] resize-both border border-dashed border-[#000080] bg-white/90 p-0.5 outline-none"
+                  style={{
+                    left: textEdit.x * zoom,
+                    top: textEdit.y * zoom,
+                    color: fg,
+                    fontFamily: PAINT_TEXT_FONT,
+                    fontSize: `${textSize * zoom}px`,
+                    lineHeight: 1.2,
+                    caretColor: fg,
+                  }}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setTextEdit((prev) => (prev ? { ...prev, value } : prev))
+                  }}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    event.stopPropagation()
+                    if (event.key === 'Escape') {
+                      event.preventDefault()
+                      cancelTextEdit()
+                      return
+                    }
+                    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                      event.preventDefault()
+                      commitTextEdit()
+                    }
+                  }}
+                />
+              ) : null}
+
               {/* Classic resize grips — grow the document */}
               <div
                 className="absolute -right-1.5 top-1/2 z-10 h-3 w-3 -translate-y-1/2 cursor-e-resize border border-white bg-[#000080]"
@@ -1456,7 +1771,7 @@ export default function PaintApp({ keyboardActive = true }) {
       </div>
 
       <div
-        className={`flex shrink-0 items-center gap-1.5 bg-[#c0c0c0] ${isPhone ? 'px-1.5 py-0.5' : 'px-2 py-1'}`}
+        className={`flex shrink-0 items-center gap-1.5 bg-[#c0c0c0] ${useMobileLayout ? 'px-1.5 py-0.5' : 'px-2 py-1'}`}
         style={{ borderTop: '1px solid #fff', borderBottom: '1px solid #808080' }}
         onClick={(event) => event.stopPropagation()}
       >
@@ -1468,10 +1783,10 @@ export default function PaintApp({ keyboardActive = true }) {
             className="absolute border border-black"
             style={{
               background: bg,
-              width: isPhone ? 14 : 16,
-              height: isPhone ? 14 : 16,
-              left: isPhone ? 14 : 14,
-              top: isPhone ? 14 : 14,
+              width: useMobileLayout ? 14 : 16,
+              height: useMobileLayout ? 14 : 16,
+              left: 14,
+              top: useMobileLayout ? 14 : 14,
             }}
             title="Background"
           />
@@ -1479,10 +1794,10 @@ export default function PaintApp({ keyboardActive = true }) {
             className="absolute z-[1] border border-black"
             style={{
               background: fg,
-              width: isPhone ? 14 : 16,
-              height: isPhone ? 14 : 16,
-              left: isPhone ? 4 : 6,
-              top: isPhone ? 4 : 6,
+              width: useMobileLayout ? 14 : 16,
+              height: useMobileLayout ? 14 : 16,
+              left: useMobileLayout ? 4 : 6,
+              top: useMobileLayout ? 4 : 6,
             }}
             title="Foreground"
           />
@@ -1518,9 +1833,7 @@ export default function PaintApp({ keyboardActive = true }) {
           type="color"
           value={fg}
           onChange={(event) => setFg(event.target.value)}
-          className={`ml-0.5 cursor-pointer border border-[#808080] bg-[#c0c0c0] ${
-            isPhone ? 'h-7 w-8' : 'h-7 w-8'
-          }`}
+          className="ml-0.5 h-7 w-8 cursor-pointer border border-[#808080] bg-[#c0c0c0]"
           aria-label="Edit colors"
           title="Edit Colors"
         />
