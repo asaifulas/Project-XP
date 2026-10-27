@@ -1,0 +1,288 @@
+{
+  "license": "CC0-1.0 / Public Domain via Openclipart.org",
+  "note": "Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art.",
+  "source": "https://openclipart.org",
+  "items": [
+    {
+      "id": "cat",
+      "category": "animals",
+      "label": "Cat",
+      "oclId": 28140,
+      "slug": "sitting-cat-outline"
+    },
+    {
+      "id": "dog",
+      "category": "animals",
+      "label": "Dog",
+      "oclId": 5520,
+      "slug": "coloring-book-dog-ilio"
+    },
+    {
+      "id": "fish",
+      "category": "animals",
+      "label": "Fish",
+      "oclId": 273123,
+      "slug": "trace-or-cut-out-and-color-the-fish"
+    },
+    {
+      "id": "bird",
+      "category": "animals",
+      "label": "Bird",
+      "oclId": 234625,
+      "slug": "simple-dove-outline"
+    },
+    {
+      "id": "butterfly",
+      "category": "animals",
+      "label": "Butterfly",
+      "oclId": 352671,
+      "slug": "simple-detailed-butterfly-lineart"
+    },
+    {
+      "id": "elephant",
+      "category": "animals",
+      "label": "Elephant",
+      "oclId": 12749,
+      "slug": "elephant-outline"
+    },
+    {
+      "id": "rabbit",
+      "category": "animals",
+      "label": "Bunny",
+      "oclId": 213606,
+      "slug": "bunny-outline"
+    },
+    {
+      "id": "duck",
+      "category": "animals",
+      "label": "Duck",
+      "oclId": 248172,
+      "slug": "duck-lineart"
+    },
+    {
+      "id": "lion",
+      "category": "animals",
+      "label": "Lion",
+      "oclId": 74749,
+      "slug": "lion-line-art"
+    },
+    {
+      "id": "bear",
+      "category": "animals",
+      "label": "Bear",
+      "oclId": 195906,
+      "slug": "coloring-book-grizzly"
+    },
+    {
+      "id": "owl",
+      "category": "animals",
+      "label": "Owl",
+      "oclId": 75271,
+      "slug": "owl-line-art"
+    },
+    {
+      "id": "shark",
+      "category": "animals",
+      "label": "Shark",
+      "oclId": 330219,
+      "slug": "great-white-shark-line-art"
+    },
+    {
+      "id": "pig",
+      "category": "animals",
+      "label": "Pig",
+      "oclId": 177040,
+      "slug": "zeldas-pig"
+    },
+    {
+      "id": "turtle",
+      "category": "animals",
+      "label": "Turtle",
+      "oclId": 354473,
+      "slug": "turtle"
+    },
+    {
+      "id": "penguin",
+      "category": "animals",
+      "label": "Penguin",
+      "oclId": 330246,
+      "slug": "cute-penguin-head"
+    },
+    {
+      "id": "airplane",
+      "category": "transportation",
+      "label": "Airplane",
+      "oclId": 173951,
+      "slug": "airplane-silhouette"
+    },
+    {
+      "id": "biplane",
+      "category": "transportation",
+      "label": "Biplane",
+      "oclId": 319632,
+      "slug": "biplane-outline-1918"
+    },
+    {
+      "id": "prop-plane",
+      "category": "transportation",
+      "label": "Prop plane",
+      "oclId": 228075,
+      "slug": "airplane-with-propeller-outline"
+    },
+    {
+      "id": "plane-shape",
+      "category": "transportation",
+      "label": "Plane shape",
+      "oclId": 352432,
+      "slug": "plane-shape-outline"
+    },
+    {
+      "id": "car",
+      "category": "transportation",
+      "label": "Car",
+      "oclId": 190005,
+      "slug": "simple-side-of-car"
+    },
+    {
+      "id": "bicycle",
+      "category": "transportation",
+      "label": "Bicycle",
+      "oclId": 26979,
+      "slug": "bicycle"
+    },
+    {
+      "id": "helicopter",
+      "category": "transportation",
+      "label": "Helicopter",
+      "oclId": 324037,
+      "slug": "big-helicopter-outline"
+    },
+    {
+      "id": "rocket",
+      "category": "transportation",
+      "label": "Rocket",
+      "oclId": 272531,
+      "slug": "rocket-coloring-page"
+    },
+    {
+      "id": "sailboat",
+      "category": "transportation",
+      "label": "Sailboat",
+      "oclId": 298680,
+      "slug": "sail-ship-2-masts-outline"
+    },
+    {
+      "id": "train",
+      "category": "transportation",
+      "label": "Train",
+      "oclId": 306359,
+      "slug": "toy-train-outline"
+    },
+    {
+      "id": "submarine",
+      "category": "transportation",
+      "label": "Submarine",
+      "oclId": 329963,
+      "slug": "submarine4-21gkg"
+    },
+    {
+      "id": "flower",
+      "category": "plants",
+      "label": "Flower",
+      "oclId": 352672,
+      "slug": "simple-flower-head-lineart"
+    },
+    {
+      "id": "pine",
+      "category": "plants",
+      "label": "Pine tree",
+      "oclId": 304732,
+      "slug": "christmas-tree-6-outline"
+    },
+    {
+      "id": "leaf",
+      "category": "plants",
+      "label": "Leaf",
+      "oclId": 354124,
+      "slug": "lutz-oak-leaf-outline"
+    },
+    {
+      "id": "mushroom",
+      "category": "plants",
+      "label": "Mushroom",
+      "oclId": 246716,
+      "slug": "toadstool-lineart"
+    },
+    {
+      "id": "cactus",
+      "category": "plants",
+      "label": "Cactus",
+      "oclId": 24040,
+      "slug": "cactus"
+    },
+    {
+      "id": "house",
+      "category": "buildings",
+      "label": "House",
+      "oclId": 275845,
+      "slug": "simple-house-line-art"
+    },
+    {
+      "id": "tent",
+      "category": "buildings",
+      "label": "Tent",
+      "oclId": 11436,
+      "slug": "rpg-map-symbols-circus-tent-2"
+    },
+    {
+      "id": "apple",
+      "category": "food",
+      "label": "Apple",
+      "oclId": 290296,
+      "slug": "apple-outline"
+    },
+    {
+      "id": "carrot",
+      "category": "food",
+      "label": "Carrot",
+      "oclId": 215798,
+      "slug": "carrot-lineart"
+    },
+    {
+      "id": "banana",
+      "category": "food",
+      "label": "Banana",
+      "oclId": 244986,
+      "slug": "bunch-of-bananas-lineart"
+    },
+    {
+      "id": "sun",
+      "category": "nature",
+      "label": "Sun",
+      "oclId": 75523,
+      "slug": "sun-line-art"
+    },
+    {
+      "id": "snowflake",
+      "category": "nature",
+      "label": "Snowflake",
+      "oclId": 279895,
+      "slug": "flat-white-snowflake-with-hollow-circular-center"
+    },
+    {
+      "id": "balloon",
+      "category": "objects",
+      "label": "Balloon",
+      "oclId": 354006,
+      "slug": "lutz-balloon-flipped"
+    },
+    {
+      "id": "trophy",
+      "category": "objects",
+      "label": "Trophy",
+      "oclId": 303459,
+      "slug": "sketched-trophy"
+    }
+  ],
+  "failed": []
+}

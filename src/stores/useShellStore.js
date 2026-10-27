@@ -148,9 +148,22 @@ export const useShellStore = create((set) => ({
     })),
 
   setWindowFramePosition: (id, pos) =>
-    set((s) => ({
-      windowFramePositions: { ...s.windowFramePositions, [id]: { x: pos.x, y: pos.y } },
-    })),
+    set((s) => {
+      const prev = s.windowFramePositions[id] ?? {}
+      const w = Number.isFinite(pos.w) ? pos.w : prev.w
+      const h = Number.isFinite(pos.h) ? pos.h : prev.h
+      return {
+        windowFramePositions: {
+          ...s.windowFramePositions,
+          [id]: {
+            x: pos.x,
+            y: pos.y,
+            ...(Number.isFinite(w) ? { w } : {}),
+            ...(Number.isFinite(h) ? { h } : {}),
+          },
+        },
+      }
+    }),
 
   removeWindowFramePosition: (id) =>
     set((s) => {

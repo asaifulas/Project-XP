@@ -9,6 +9,7 @@ Personal portfolio website inspired by **Windows XP**: a desktop UI, draggable w
 - **Taskbar**: Start button/menu + running programs
 - **Playground folder** (desktop, under Gallery): nested `Games` / `Applications` / `Webpage` with per-app folders, launch shortcuts, and Word `README.md` docs
 - **Classic XP toys** (lazy-loaded): 3D Pinball, Solitaire (Klondike), Minesweeper, Paint — phone-friendly controls
+- **Paint Edu**: kids tracing on A4 (ABC / Jawi / 123 / shapes / Openclipart CC0 clipart) with Magnetic/Plain + Beginner–Expert snap; scrollable XP submenus; PNG save
 - **Office / media spoofs**: Word docs, PowerPoint Experience deck, Excel/CertiMagic, Winamp, PDF reader, IE iframe shell
 
 ## Tech stack

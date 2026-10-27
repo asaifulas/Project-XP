@@ -125,7 +125,7 @@ function PaintStackBody({ keyboardActive }) {
         'div',
         {
           className:
-            'flex min-h-[280px] flex-1 items-center justify-center bg-[#c0c0c0] font-xp text-[11px] text-black',
+            'flex min-h-0 flex-1 items-center justify-center bg-[#c0c0c0] font-xp text-[11px] text-black',
         },
         'Loading Paint…',
       ),
@@ -157,7 +157,8 @@ export const EXTERNAL_URLS = {
  * - `window.explorerAddressPath` (optional): when `shell: 'folder'`, text shown in the address bar.
  * - `window.initialUrl` (optional): when `shell: 'ie'`, default URL for the fake browser.
  * - Restored (non-maximized) frame size: 1440×1080 from `src/constants/xpWindow.js` (`shell: 'folder'` → 1024×768) unless `window.className` / `compactFrame` specialize (e.g. Calculator, Winamp).
- * - `window.compactFrame` (optional): when true, no fixed standard height — window hugs content (Calculator).
+ * - `window.compactFrame` (optional): when true, skip the 1440×1080 standard frame. Without a height in
+ *   `className`, the window hugs content (Calculator). With a height (Paint), the client scrolls inside.
  * - `children` (optional): for `shell: 'folder'`, an array of `APPS[].id` shown as launchable shortcuts in `FolderApp`.
  * - `folderLabel` (optional): label inside a parent folder when `desktop` is omitted.
  * - `readmeId` (optional): key into playground README docs for Word shells on `/readme`.
@@ -679,6 +680,7 @@ export const APPS = [
     icon: pinballIcon,
     group: 'Games',
     folderLabel: '3D Pinball',
+    desktop: { label: '3D Pinball', order: 28 },
     stackable: true,
     window: {
       showMenuBar: false,
@@ -699,6 +701,7 @@ export const APPS = [
     icon: solitaireIcon,
     group: 'Games',
     folderLabel: 'Solitaire',
+    desktop: { label: 'Solitaire', order: 29 },
     stackable: true,
     window: {
       showMenuBar: false,
@@ -719,6 +722,7 @@ export const APPS = [
     icon: minesweeperIcon,
     group: 'Games',
     folderLabel: 'Minesweeper',
+    desktop: { label: 'Minesweeper', order: 27 },
     stackable: true,
     window: {
       showMenuBar: false,
@@ -739,10 +743,13 @@ export const APPS = [
     icon: paintIcon,
     group: 'Accessories',
     folderLabel: 'Paint',
+    desktop: { label: 'Paint', order: 26 },
     stackable: true,
     window: {
       showMenuBar: false,
-      className: 'w-[min(720px,calc(100%-24px))]',
+      // Fixed restored size: Edu A4 + zoom scrolls inside, does not grow the XP window.
+      className:
+        'w-[min(720px,calc(100%-24px))] h-[min(560px,calc(100svh-48px))]',
       shell: 'default',
       allowMaximize: true,
       compactFrame: true,

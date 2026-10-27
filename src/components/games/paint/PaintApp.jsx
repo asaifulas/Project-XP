@@ -1,18 +1,34 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import usePhoneGameLayout from '../_shared/usePhoneGameLayout'
 import { cursorForTool } from './cursors.js'
+import PaintCascadingMenu from './PaintCascadingMenu.jsx'
+import { magneticSnapToPaths } from './eduMagnetic.js'
+import { EDU_CLIPART_CATEGORIES, loadSvgImage } from './eduClipart.js'
+import {
+  EDU_A4_H,
+  EDU_A4_W,
+  EDU_DIGIT_IDS,
+  EDU_GUIDE_SIZES,
+  EDU_LETTER_IDS,
+  EDU_SHAPE_IDS,
+  EDU_SHAPE_LABELS,
+  drawEduTemplate,
+  getEduTemplate,
+} from './eduTemplates.js'
 import {
   CANVAS_H,
   CANVAS_W,
   DEFAULT_COLORS,
   MAX_CANVAS,
+  MAX_STROKE,
   MAX_UNDO,
   MIN_CANVAS,
-  STROKE_PRESETS,
+  MIN_STROKE,
   TOOLS,
   ZOOM_PRESETS,
-  floodFill,
+  clampStrokeSize,
   hexToRgba,
+  pourFill,
   rgbaToHex,
 } from './paintTools.js'
 import { saveCanvasPng } from './savePng.js'
@@ -48,7 +64,12 @@ export default function PaintApp({ keyboardActive = true }) {
   const [tool, setTool] = useState(/** @type {(typeof TOOLS)[number]} */ ('pencil'))
   const [fg, setFg] = useState('#000000')
   const [bg, setBg] = useState('#ffffff')
+  /** Shape tools (line/rect/ellipse) width. */
   const [stroke, setStroke] = useState(2)
+  /** Independent sizes for freehand tools. */
+  const [pencilSize, setPencilSize] = useState(2)
+  const [brushSize, setBrushSize] = useState(8)
+  const [eraserSize, setEraserSize] = useState(18)
   const [zoom, setZoom] = useState(1)
   const [canvasW, setCanvasW] = useState(CANVAS_W)
   const [canvasH, setCanvasH] = useState(CANVAS_H)
@@ -62,6 +83,26 @@ export default function PaintApp({ keyboardActive = true }) {
   const [attrH, setAttrH] = useState(String(CANVAS_H))
   /** Touch/finger paints on contact — like a real brush on canvas (no PC click model). */
   const [mobileMode, setMobileMode] = useState(() => preferTouchDrawing())
+
+  /** Edu tracing: kids learn letters/shapes on A4 with optional magnetic snap. */
+  const [eduLineMode, setEduLineMode] = useState(/** @type {'magnetic' | 'plain'} */ ('magnetic'))
+  const [eduLineType, setEduLineType] = useState(
+    /** @type {'dotted' | 'dash' | 'straight'} */ ('dotted'),
+  )
+  const [eduGuideSize, setEduGuideSize] = useState(
+    /** @type {'s' | 'm' | 'l' | 'xl'} */ ('m'),
+  )
+  const [eduMagneticLevel, setEduMagneticLevel] = useState(
+    /** @type {'beginner' | 'medium' | 'expert'} */ ('beginner'),
+  )
+  const [eduTemplateId, setEduTemplateId] = useState(/** @type {string | null} */ (null))
+  const eduTemplateRef = useRef(/** @type {ReturnType<typeof getEduTemplate>} */ (null))
+  /** Bumps after applying a template so layout effect repaints after React commits size state. */
+  const [eduPaintGen, setEduPaintGen] = useState(0)
+  /** Brush stamp preview in CSS px relative to the canvas box (center). */
+  const [brushPreview, setBrushPreview] = useState(
+    /** @type {null | { x: number, y: number }} */ (null),
+  )
 
   const getCtx = useCallback(() => canvasRef.current?.getContext('2d', { willReadFrequently: true }) ?? null, [])
 
@@ -120,6 +161,14 @@ export default function PaintApp({ keyboardActive = true }) {
     [bg, getCtx, pushUndo, syncOverlaySize],
   )
 
+  const paintEduGuide = useCallback(
+    (ctx, template, lineType, guideSize) => {
+      if (!template) return
+      drawEduTemplate(ctx, template, lineType, guideSize)
+    },
+    [],
+  )
+
   const clearCanvas = useCallback(
     (pushHistory = true) => {
       const canvas = canvasRef.current
@@ -128,9 +177,122 @@ export default function PaintApp({ keyboardActive = true }) {
       if (pushHistory) pushUndo()
       ctx.fillStyle = bg
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-      setStatus('New image')
+      const tmpl = eduTemplateRef.current
+      if (tmpl) paintEduGuide(ctx, tmpl, eduLineType, eduGuideSize)
+      setStatus(tmpl ? `Edu · ${tmpl.label}` : 'New image')
     },
-    [bg, getCtx, pushUndo],
+    [bg, eduGuideSize, eduLineType, getCtx, paintEduGuide, pushUndo],
+  )
+
+  const applyEduTemplate = useCallback(
+    (templateId) => {
+      const template = getEduTemplate(templateId)
+      if (!template) {
+        setStatus('Template not found')
+        return
+      }
+      const canvas = canvasRef.current
+      if (!canvas) return
+      pushUndo()
+
+      const finishApply = (ready) => {
+        eduTemplateRef.current = ready
+        setEduTemplateId(templateId)
+        // Size bitmap in JS only (avoid React width/height props wiping pixels).
+        canvas.width = EDU_A4_W
+        canvas.height = EDU_A4_H
+        syncOverlaySize(EDU_A4_W, EDU_A4_H)
+        setCanvasW(EDU_A4_W)
+        setCanvasH(EDU_A4_H)
+        setAttrW(String(EDU_A4_W))
+        setAttrH(String(EDU_A4_H))
+        setTool('brush')
+        if (isPhone || preferTouchDrawing()) {
+          setMobileMode(true)
+          setBrushSize((s) => Math.max(s, 8))
+          setPencilSize((s) => Math.max(s, 3))
+        } else {
+          setBrushSize((s) => Math.max(s, 6))
+        }
+        setZoom(1)
+        setFileName(`edu-${ready.label}`)
+        setEduPaintGen((n) => n + 1)
+        setStatus(
+          `Edu · ${ready.label} · ${eduLineMode}/${eduLineType}` +
+            (eduLineMode === 'magnetic' ? ` · ${eduMagneticLevel}` : ''),
+        )
+      }
+
+      // Clipart: load the SVG as an image so the guide looks like the real picture.
+      if (template.kind === 'clipart' && template.svgMarkup) {
+        setStatus(`Edu · loading ${template.label}…`)
+        loadSvgImage(template.svgMarkup)
+          .then((img) => finishApply({ ...template, guideImage: img }))
+          .catch(() => finishApply({ ...template, guideImage: null }))
+        return
+      }
+
+      finishApply({ ...template, guideImage: null })
+    },
+    [
+      eduLineMode,
+      eduLineType,
+      eduMagneticLevel,
+      isPhone,
+      pushUndo,
+      syncOverlaySize,
+    ],
+  )
+
+  const exitEdu = useCallback(() => {
+    eduTemplateRef.current = null
+    setEduTemplateId(null)
+    setStatus('Edu off — free paint')
+  }, [])
+
+  // Paint Edu guide after size state commits (React width/height props used to wipe the bitmap).
+  const eduGuideStylePrev = useRef(`${eduLineType}:${eduGuideSize}`)
+  useLayoutEffect(() => {
+    const template = eduTemplateRef.current
+    if (!eduTemplateId || !template) return
+    const canvas = canvasRef.current
+    const ctx = getCtx()
+    if (!canvas || !ctx) return
+    if (canvas.width !== EDU_A4_W || canvas.height !== EDU_A4_H) {
+      canvas.width = EDU_A4_W
+      canvas.height = EDU_A4_H
+      syncOverlaySize(EDU_A4_W, EDU_A4_H)
+    }
+    const styleKey = `${eduLineType}:${eduGuideSize}`
+    const styleChanged = eduGuideStylePrev.current !== styleKey
+    eduGuideStylePrev.current = styleKey
+    if (styleChanged && eduPaintGen > 0) {
+      pushUndo()
+    }
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    paintEduGuide(ctx, template, eduLineType, eduGuideSize)
+  }, [
+    eduTemplateId,
+    eduLineType,
+    eduGuideSize,
+    eduPaintGen,
+    getCtx,
+    paintEduGuide,
+    pushUndo,
+    syncOverlaySize,
+  ])
+
+  const snapEduPoint = useCallback(
+    (pt) => {
+      const template = eduTemplateRef.current
+      if (!template || eduLineMode !== 'magnetic') return pt
+      return magneticSnapToPaths(pt, template.paths, eduMagneticLevel, {
+        closed: template.closed,
+        previous: lastRef.current,
+      })
+    },
+    [eduLineMode, eduMagneticLevel],
   )
 
   useEffect(() => {
@@ -166,11 +328,29 @@ export default function PaintApp({ keyboardActive = true }) {
 
   const widthForDrawTool = useCallback(
     (drawTool) => {
-      if (drawTool === 'brush') return Math.max(stroke * 2, mobileMode ? 6 : 4)
-      if (drawTool === 'eraser') return Math.max(stroke * 3, mobileMode ? 10 : 6)
-      return Math.max(stroke, mobileMode ? 2 : 1)
+      if (drawTool === 'brush') return brushSize
+      if (drawTool === 'eraser') return eraserSize
+      if (drawTool === 'pencil') return pencilSize
+      return stroke
     },
-    [mobileMode, stroke],
+    [brushSize, eraserSize, pencilSize, stroke],
+  )
+
+  const activeFreehandSize =
+    tool === 'brush' ? brushSize : tool === 'eraser' ? eraserSize : tool === 'pencil' ? pencilSize : stroke
+
+  const setActiveFreehandSize = useCallback(
+    (raw) => {
+      const next = clampStrokeSize(raw)
+      if (tool === 'brush') setBrushSize(next)
+      else if (tool === 'eraser') setEraserSize(next)
+      else if (tool === 'pencil') setPencilSize(next)
+      else setStroke(next)
+      setStatus(
+        `${tool === 'eraser' ? 'Eraser' : tool === 'brush' ? 'Brush' : tool === 'pencil' ? 'Pencil' : 'Stroke'} size: ${next}px`,
+      )
+    },
+    [tool],
   )
 
   const strokeLine = useCallback(
@@ -200,7 +380,7 @@ export default function PaintApp({ keyboardActive = true }) {
       setMobileMode(on)
       if (on) {
         setTool('brush')
-        setStroke((s) => Math.max(s, 3))
+        setBrushSize((s) => Math.max(s, 6))
         setStatus('Mobile mode — touch canvas to paint (lift finger to stop)')
       } else {
         setStatus('PC mode — click and drag to draw')
@@ -346,9 +526,33 @@ export default function PaintApp({ keyboardActive = true }) {
     if (announce) setStatus(`Zoom ${z}x`)
   }, [])
 
+  const updateBrushPreviewFromEvent = useCallback(
+    (event) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const stampTool =
+        tool === 'pencil' || tool === 'brush' || tool === 'eraser' || tool === 'line'
+          ? tool
+          : mobileMode
+            ? 'brush'
+            : null
+      if (!stampTool) {
+        setBrushPreview(null)
+        return
+      }
+      const rect = canvas.getBoundingClientRect()
+      setBrushPreview({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      })
+    },
+    [mobileMode, tool],
+  )
+
   const onPointerDown = useCallback(
     (event) => {
       setMenuOpen(null)
+      updateBrushPreviewFromEvent(event)
       const canvas = canvasRef.current
       const ctx = getCtx()
       if (!canvas || !ctx) return
@@ -416,24 +620,41 @@ export default function PaintApp({ keyboardActive = true }) {
       if (tool === 'fill') {
         pushUndo()
         const image = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const n = floodFill(image, pt.x, pt.y, hexToRgba(fg))
+        // Watercolor pour: blend from the click; more pours layer pigment in the basin.
+        const n = pourFill(image, pt.x, pt.y, hexToRgba(fg))
         ctx.putImageData(image, 0, 0)
-        setStatus(n ? `Filled ${n} px` : 'Nothing to fill')
+        setStatus(n ? `Poured ${n} px` : 'Nothing to fill')
         return
       }
 
       pushUndo()
       drawingRef.current = true
-      startRef.current = pt
-      lastRef.current = pt
+      const startPt =
+        tool === 'eraser' || tool === 'fill' || tool === 'eyedropper' || tool === 'magnify'
+          ? pt
+          : snapEduPoint(pt)
+      startRef.current = startPt
+      lastRef.current = startPt
       mobileDrawToolRef.current =
         tool === 'eraser' ? 'eraser' : tool === 'brush' ? 'brush' : tool === 'pencil' ? 'pencil' : 'brush'
 
       if (tool === 'pencil' || tool === 'eraser' || tool === 'brush') {
-        strokeLine(ctx, pt, pt, { drawTool: tool, erase: tool === 'eraser' })
+        strokeLine(ctx, startPt, startPt, { drawTool: tool, erase: tool === 'eraser' })
       }
     },
-    [applyZoom, canvasPoint, fg, getCtx, mobileMode, pushUndo, strokeLine, tool, zoom],
+    [
+      applyZoom,
+      canvasPoint,
+      fg,
+      getCtx,
+      mobileMode,
+      pushUndo,
+      snapEduPoint,
+      strokeLine,
+      tool,
+      updateBrushPreviewFromEvent,
+      zoom,
+    ],
   )
 
   const onPointerMove = useCallback(
@@ -441,6 +662,7 @@ export default function PaintApp({ keyboardActive = true }) {
       if (activePointerIdRef.current !== null && event.pointerId !== activePointerIdRef.current) {
         return
       }
+      updateBrushPreviewFromEvent(event)
       const pt = canvasPoint(event)
       setCoords(`${Math.floor(pt.x)}, ${Math.floor(pt.y)}`)
       if (!drawingRef.current) return
@@ -460,11 +682,12 @@ export default function PaintApp({ keyboardActive = true }) {
       if (freehand && (tool === 'pencil' || tool === 'eraser' || tool === 'brush' || mobileMode)) {
         if (!lastRef.current) return
         event.preventDefault?.()
-        strokeLine(ctx, lastRef.current, pt, {
+        const nextPt = drawTool === 'eraser' ? pt : snapEduPoint(pt)
+        strokeLine(ctx, lastRef.current, nextPt, {
           drawTool,
           erase: drawTool === 'eraser',
         })
-        lastRef.current = pt
+        lastRef.current = nextPt
         return
       }
 
@@ -475,7 +698,16 @@ export default function PaintApp({ keyboardActive = true }) {
         drawShape(octx, tool, startRef.current, pt)
       }
     },
-    [canvasPoint, drawShape, getCtx, mobileMode, strokeLine, tool],
+    [
+      canvasPoint,
+      drawShape,
+      getCtx,
+      mobileMode,
+      snapEduPoint,
+      strokeLine,
+      tool,
+      updateBrushPreviewFromEvent,
+    ],
   )
 
   const endStroke = useCallback(
@@ -626,13 +858,161 @@ export default function PaintApp({ keyboardActive = true }) {
       ],
     },
     {
+      id: 'Edu',
+      items: [
+        {
+          label: 'Settings',
+          submenu: [
+            {
+              label: 'Line',
+              submenu: [
+                {
+                  label: 'Magnetic',
+                  checked: eduLineMode === 'magnetic',
+                  action: () => setEduLineMode('magnetic'),
+                },
+                {
+                  label: 'Plain',
+                  checked: eduLineMode === 'plain',
+                  action: () => setEduLineMode('plain'),
+                },
+              ],
+            },
+            {
+              label: 'Type',
+              submenu: [
+                {
+                  label: 'Dotted',
+                  checked: eduLineType === 'dotted',
+                  action: () => setEduLineType('dotted'),
+                },
+                {
+                  label: 'Dash',
+                  checked: eduLineType === 'dash',
+                  action: () => setEduLineType('dash'),
+                },
+                {
+                  label: 'Straight',
+                  checked: eduLineType === 'straight',
+                  action: () => setEduLineType('straight'),
+                },
+              ],
+            },
+            {
+              label: 'Size',
+              submenu: /** @type {const} */ (['s', 'm', 'l', 'xl']).map((id) => ({
+                label: EDU_GUIDE_SIZES[id].label,
+                checked: eduGuideSize === id,
+                action: () => setEduGuideSize(id),
+              })),
+            },
+            { separator: true },
+            {
+              label: 'Magnetic level',
+              disabled: eduLineMode !== 'magnetic',
+              submenu: [
+                {
+                  label: 'Beginner',
+                  checked: eduMagneticLevel === 'beginner',
+                  action: () => setEduMagneticLevel('beginner'),
+                },
+                {
+                  label: 'Medium',
+                  checked: eduMagneticLevel === 'medium',
+                  action: () => setEduMagneticLevel('medium'),
+                },
+                {
+                  label: 'Expert',
+                  checked: eduMagneticLevel === 'expert',
+                  action: () => setEduMagneticLevel('expert'),
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'ABC',
+          submenu: [
+            {
+              label: 'Uppercase',
+              submenu: EDU_LETTER_IDS.filter((id) => id.slice(7) === id.slice(7).toUpperCase()).map(
+                (id) => ({
+                  label: id.slice(7),
+                  checked: eduTemplateId === id,
+                  action: () => applyEduTemplate(id),
+                }),
+              ),
+            },
+            {
+              label: 'Lowercase',
+              submenu: EDU_LETTER_IDS.filter((id) => id.slice(7) === id.slice(7).toLowerCase()).map(
+                (id) => ({
+                  label: id.slice(7),
+                  checked: eduTemplateId === id,
+                  action: () => applyEduTemplate(id),
+                }),
+              ),
+            },
+          ],
+        },
+        {
+          label: '123',
+          submenu: EDU_DIGIT_IDS.map((id) => ({
+            label: id.slice(6),
+            checked: eduTemplateId === id,
+            action: () => applyEduTemplate(id),
+          })),
+        },
+        {
+          label: 'Jawi',
+          disabled: true,
+          submenu: [{ label: 'Coming soon', disabled: true }],
+        },
+        {
+          label: 'Shape',
+          submenu: EDU_SHAPE_IDS.map((id) => {
+            const name = id.slice(6)
+            return {
+              label: EDU_SHAPE_LABELS[name] ?? name.charAt(0).toUpperCase() + name.slice(1),
+              checked: eduTemplateId === id,
+              action: () => applyEduTemplate(id),
+            }
+          }),
+        },
+        {
+          label: 'Clipart',
+          submenu: EDU_CLIPART_CATEGORIES.map((category) => ({
+            label: category.label,
+            submenu: category.items.map((item) => {
+              const id = `clipart:${item.id}`
+              return {
+                label: item.label,
+                checked: eduTemplateId === id,
+                action: () => applyEduTemplate(id),
+              }
+            }),
+          })),
+        },
+        {
+          label: 'Drawing',
+          disabled: true,
+          submenu: [{ label: 'Coming soon', disabled: true }],
+        },
+        {
+          label: 'Exit Edu',
+          action: exitEdu,
+          disabled: !eduTemplateId,
+        },
+      ],
+    },
+    {
       id: 'Help',
       items: [
         {
           label: 'Help Topics',
           action: () =>
             setStatus(
-              'Drag canvas handles to resize · Magnifier zooms · Tool shown on cursor · Save → disk',
+              'Edu: ABC · 123 · shapes · Openclipart clipart · Magnetic snaps to the guide · Save PNG',
             ),
         },
       ],
@@ -655,6 +1035,21 @@ export default function PaintApp({ keyboardActive = true }) {
   const displayH = canvasH * zoom
   const showStrokeOptions = tool !== 'magnify' && tool !== 'fill' && tool !== 'eyedropper'
   const showZoomOptions = tool === 'magnify'
+  const stampTool =
+    tool === 'pencil' || tool === 'brush' || tool === 'eraser'
+      ? tool
+      : tool === 'line'
+        ? 'pencil'
+        : mobileMode
+          ? 'brush'
+          : null
+  const brushDiameterCss = stampTool ? widthForDrawTool(stampTool) * zoom : 0
+  const canvasCursor = stampTool
+    ? cursorForTool(stampTool, {
+        widthCss: Math.max(6, brushDiameterCss),
+        erase: stampTool === 'eraser',
+      })
+    : cursorForTool(tool)
 
   return (
     <div
@@ -662,15 +1057,15 @@ export default function PaintApp({ keyboardActive = true }) {
       onClick={() => setMenuOpen(null)}
     >
       <div
-        className="relative flex shrink-0 items-stretch border-b border-[#808080] bg-[#c0c0c0] px-1"
+        className="xp-menubar relative shrink-0"
         onClick={(event) => event.stopPropagation()}
       >
         {menus.map((menu) => (
           <div key={menu.id} className="relative">
             <button
               type="button"
-              className={`cursor-default px-2 py-0.5 hover:bg-[#000080] hover:text-white ${
-                menuOpen === menu.id ? 'bg-[#000080] text-white' : ''
+              className={`cursor-default select-none ${
+                menuOpen === menu.id ? '!bg-[#316ac5] !text-white' : ''
               }`}
               onClick={() => setMenuOpen((v) => (v === menu.id ? null : menu.id))}
               onMouseEnter={() => {
@@ -681,23 +1076,8 @@ export default function PaintApp({ keyboardActive = true }) {
               {menu.id.slice(1)}
             </button>
             {menuOpen === menu.id ? (
-              <div className="absolute left-0 top-full z-20 min-w-[180px] border border-[#808080] bg-[#c0c0c0] py-0.5 shadow-[2px_2px_0_rgba(0,0,0,0.35)]">
-                {menu.items.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    disabled={Boolean(item.disabled)}
-                    className={`flex w-full cursor-default whitespace-pre px-4 py-0.5 text-left hover:bg-[#000080] hover:text-white disabled:text-[#808080] ${
-                      item.bold ? 'font-bold' : ''
-                    }`}
-                    onClick={() => {
-                      setMenuOpen(null)
-                      item.action?.()
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+              <div className="absolute left-0 top-full z-30 pt-0.5">
+                <PaintCascadingMenu items={menu.items} onClose={() => setMenuOpen(null)} />
               </div>
             ) : null}
           </div>
@@ -752,9 +1132,10 @@ export default function PaintApp({ keyboardActive = true }) {
           </div>
 
           <div
-            className={`flex flex-col items-center justify-center gap-1 border border-[#808080] bg-[#c0c0c0] p-1 ${
-              isPhone ? 'min-w-[72px]' : 'mx-0.5 mb-0.5 min-h-[72px]'
+            className={`flex flex-col items-center justify-center gap-1.5 border border-[#808080] bg-[#c0c0c0] p-1.5 ${
+              isPhone ? 'min-w-[56px]' : 'mx-0.5 mb-0.5 min-h-[96px] w-[52px]'
             }`}
+            onClick={(event) => event.stopPropagation()}
           >
             {showZoomOptions
               ? ZOOM_PRESETS.map((z) => (
@@ -765,36 +1146,42 @@ export default function PaintApp({ keyboardActive = true }) {
                     className={`w-10 px-0.5 text-center text-[10px] ${
                       zoom === z ? 'bg-[#000080] text-white' : 'hover:bg-[#000080]/20'
                     }`}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      applyZoom(z)
-                    }}
+                    onClick={() => applyZoom(z)}
                   >
                     {z}x
                   </button>
                 ))
               : null}
-            {showStrokeOptions
-              ? STROKE_PRESETS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    title={`${n}px`}
-                    className={`flex h-3 w-10 items-center justify-center ${
-                      stroke === n ? 'bg-[#000080]' : 'hover:bg-[#000080]/20'
-                    }`}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setStroke(n)
+            {showStrokeOptions ? (
+              <>
+                <div
+                  className="flex h-10 w-10 items-center justify-center border border-[#808080] bg-white shadow-[inset_1px_1px_0_#fff]"
+                  title={`${activeFreehandSize}px`}
+                  aria-hidden
+                >
+                  <span
+                    className="block rounded-full"
+                    style={{
+                      width: Math.min(36, Math.max(2, activeFreehandSize)),
+                      height: Math.min(36, Math.max(2, activeFreehandSize)),
+                      background: tool === 'eraser' ? '#f2d84a' : fg,
+                      border: tool === 'eraser' ? '1px solid #8a7a10' : '1px solid rgba(0,0,0,0.35)',
                     }}
-                  >
-                    <span
-                      className="block w-8"
-                      style={{ height: Math.max(1, n), background: stroke === n ? '#fff' : '#000' }}
-                    />
-                  </button>
-                ))
-              : null}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min={MIN_STROKE}
+                  max={MAX_STROKE}
+                  value={activeFreehandSize}
+                  onChange={(event) => setActiveFreehandSize(event.target.value)}
+                  className={`accent-[#000080] ${isPhone ? 'w-16' : 'h-16 w-3'}`}
+                  style={isPhone ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
+                  aria-label="Tool size"
+                />
+                <span className="text-[9px] tabular-nums text-black/70">{activeFreehandSize}</span>
+              </>
+            ) : null}
             {!showStrokeOptions && !showZoomOptions ? (
               <span className="px-1 text-center text-[9px] text-black/50">—</span>
             ) : null}
@@ -815,29 +1202,27 @@ export default function PaintApp({ keyboardActive = true }) {
             <div className="relative border border-[#404040] bg-white shadow-[1px_1px_0_#fff]">
               <canvas
                 ref={canvasRef}
-                width={canvasW}
-                height={canvasH}
                 className="block touch-none"
                 style={{
                   width: displayW,
                   height: displayH,
                   imageRendering: zoom > 1 ? 'pixelated' : 'auto',
-                  cursor: cursorForTool(tool),
+                  cursor: canvasCursor,
                 }}
                 onContextMenu={(event) => event.preventDefault()}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
+                onPointerLeave={() => setBrushPreview(null)}
                 onPointerCancel={() => {
                   drawingRef.current = false
                   clearOverlay()
                   startRef.current = null
+                  setBrushPreview(null)
                 }}
               />
               <canvas
                 ref={overlayRef}
-                width={canvasW}
-                height={canvasH}
                 className="pointer-events-none absolute left-0 top-0"
                 style={{
                   width: displayW,
@@ -846,6 +1231,21 @@ export default function PaintApp({ keyboardActive = true }) {
                 }}
                 aria-hidden
               />
+              {brushPreview && brushDiameterCss > 0 ? (
+                <div
+                  className="pointer-events-none absolute z-[5] rounded-full border border-black/80"
+                  style={{
+                    left: brushPreview.x - brushDiameterCss / 2,
+                    top: brushPreview.y - brushDiameterCss / 2,
+                    width: brushDiameterCss,
+                    height: brushDiameterCss,
+                    background:
+                      tool === 'eraser' ? 'rgba(242, 216, 74, 0.28)' : 'rgba(0, 0, 0, 0.08)',
+                    boxShadow: '0 0 0 1px rgba(255,255,255,0.85)',
+                  }}
+                  aria-hidden
+                />
+              ) : null}
 
               {/* Classic resize grips — grow the document */}
               <div

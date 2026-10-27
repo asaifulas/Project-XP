@@ -13,7 +13,7 @@ const PaintApp = lazy(() => import('../components/games/paint/PaintApp'))
 
 function PaintBusy() {
   return (
-    <div className="flex min-h-[280px] flex-1 items-center justify-center bg-[#c0c0c0] font-xp text-[11px] text-black">
+    <div className="flex min-h-0 flex-1 items-center justify-center bg-[#c0c0c0] font-xp text-[11px] text-black">
       Loading Paint…
     </div>
   )

@@ -124,6 +124,14 @@ const DESKTOP_GUIDE_ITEMS = [
     appId: 'winamp',
   },
   {
+    name: 'Paint',
+    type: 'APP',
+    typeClass: 'bg-[#245edc] text-white',
+    description:
+      'XP Paint plus Edu mode for kids: A4 tracing (ABC, 123, shapes like star & pentagon), Openclipart coloring-book clipart, magnetic snap guides, and PNG save.',
+    appId: 'paint',
+  },
+  {
     name: 'Playground/',
     type: 'DIR',
     typeClass: 'bg-[#f4c542] text-zinc-900',
@@ -434,9 +442,9 @@ export default function WelcomeWindowContent() {
           <span className="font-semibold">Experience.ppt</span>, and then{' '}
           <span className="font-semibold">Projects_Saiful.pdf</span>. For a behind-the-scenes look at how
           this site is built, open <span className="font-semibold">System Properties</span>. Queue something
-          up in <span className="font-semibold">Winamp</span> while you browse — or dig into{' '}
-          <span className="font-semibold">Playground</span> for Pinball, Solitaire, Minesweeper, Paint, and
-          more.
+          up in <span className="font-semibold">Winamp</span>, try <span className="font-semibold">Paint</span>{' '}
+          Edu (letters, shapes, coloring clipart), or dig into{' '}
+          <span className="font-semibold">Playground</span> for Pinball, Solitaire, Minesweeper, and more.
         </p>
 
         <p className="mt-4 text-justify">

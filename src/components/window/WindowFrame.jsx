@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDrag, useDragLayer } from 'react-dnd'
 import { getEmptyImage } from 'react-dnd-html5-backend'
@@ -17,6 +17,20 @@ import {
   XP_STANDARD_FRAME_CLASS,
   XP_STANDARD_FRAME_HEIGHT_ONLY_CLASS,
 } from '../../constants/xpWindow'
+import { desktopBounds, MIN_FRAME_H, MIN_FRAME_W, resizeFrame } from './windowFrameGeometry.js'
+
+/** @typedef {'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'} ResizeEdge */
+
+const RESIZE_HANDLES = /** @type {const} */ ([
+  { edge: 'n', className: 'left-2 right-2 top-0 h-1.5 cursor-n-resize' },
+  { edge: 's', className: 'left-2 right-2 bottom-0 h-1.5 cursor-s-resize' },
+  { edge: 'e', className: 'top-2 bottom-2 right-0 w-1.5 cursor-e-resize' },
+  { edge: 'w', className: 'top-2 bottom-2 left-0 w-1.5 cursor-w-resize' },
+  { edge: 'ne', className: 'right-0 top-0 h-3 w-3 cursor-ne-resize' },
+  { edge: 'nw', className: 'left-0 top-0 h-3 w-3 cursor-nw-resize' },
+  { edge: 'se', className: 'right-0 bottom-0 h-3 w-3 cursor-se-resize' },
+  { edge: 'sw', className: 'left-0 bottom-0 h-3 w-3 cursor-sw-resize' },
+])
 
 const PHONE_LAYOUT_QUERY = '(max-width: 767px)'
 
@@ -54,6 +68,8 @@ function usePhoneLayout() {
  *   Address bar path when `shell === 'folder'` (defaults from `title` if omitted).
  * @param {boolean} [compactRestoredFrame]
  *   When true, restored window uses intrinsic height (no fixed standard height); for small fixed-width apps like Calculator.
+ * @param {boolean} [allowResize]
+ *   When true (default: same as allowMaximize), restored XP frames can be drag-resized within the desktop.
  */
 export default function WindowFrame({
   programId,
@@ -70,15 +86,24 @@ export default function WindowFrame({
   shell = 'default',
   allowMaximize = true,
   allowMinimize = true,
+  allowResize: allowResizeProp,
   explorerAddressPath,
   explorerVariant,
   compactRestoredFrame = false,
   noClientPadding = false,
 }) {
+  const allowResize = allowResizeProp ?? allowMaximize
   const [isOpen, setIsOpen] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
   const [titleMenu, setTitleMenu] = useState(null)
+  /** @type {React.MutableRefObject<HTMLElement | null>} */
+  const frameRef = useRef(null)
+  /** @type {React.MutableRefObject<null | { edge: ResizeEdge, startX: number, startY: number, origin: { x: number, y: number, w: number, h: number } }>} */
+  const resizeDragRef = useRef(null)
+  const [liveFrame, setLiveFrame] = useState(
+    /** @type {null | { x: number, y: number, w: number, h: number }} */ (null),
+  )
   const programs = useShellStore((s) => s.runningPrograms)
   const upsertProgram = useShellStore((s) => s.upsertProgram)
   const removeProgram = useShellStore((s) => s.removeProgram)
@@ -108,28 +133,33 @@ export default function WindowFrame({
   }, [stackIndex, shell])
 
   const baseX =
-    storedPosition && Number.isFinite(storedPosition.x)
-      ? storedPosition.x
-      : defaultPosition.x
+    storedPosition && Number.isFinite(storedPosition.x) ? storedPosition.x : defaultPosition.x
   const baseY =
-    storedPosition && Number.isFinite(storedPosition.y)
-      ? storedPosition.y
-      : defaultPosition.y
+    storedPosition && Number.isFinite(storedPosition.y) ? storedPosition.y : defaultPosition.y
+  const storedW = storedPosition && Number.isFinite(storedPosition.w) ? storedPosition.w : null
+  const storedH = storedPosition && Number.isFinite(storedPosition.h) ? storedPosition.h : null
 
   const program = programs.find((p) => p.id === pid)
 
   const isFrameless = chrome === 'none'
   const isPhone = usePhoneLayout()
+  const canResizeFrame =
+    allowResize && !isPhone && !isFrameless && !(isMaximized && allowMaximize)
 
   const [{ isDragging }, dragRef, previewRef] = useDrag(
     () => ({
       type: 'WINDOW_FRAME',
-      canDrag: !isPhone && (isFrameless ? !isMaximized : !(isMaximized && allowMaximize)),
+      canDrag:
+        !isPhone &&
+        !resizeDragRef.current &&
+        (isFrameless ? !isMaximized : !(isMaximized && allowMaximize)),
       item: () => ({
         pid,
         title,
         x: baseX,
         y: baseY,
+        w: storedW,
+        h: storedH,
       }),
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
@@ -137,20 +167,45 @@ export default function WindowFrame({
       end: (item, monitor) => {
         const delta = monitor.getDifferenceFromInitialOffset()
         if (!delta || !item) return
+        const desk = desktopBounds()
+        const frameW = Number.isFinite(item.w) ? item.w : MIN_FRAME_W
+        const frameH = Number.isFinite(item.h) ? item.h : MIN_FRAME_H
+        const nextX = Math.max(0, Math.min(item.x + delta.x, Math.max(0, desk.width - frameW)))
+        const nextY = Math.max(0, Math.min(item.y + delta.y, Math.max(0, desk.height - frameH)))
         setWindowFramePosition(item.pid, {
-          x: item.x + delta.x,
-          y: item.y + delta.y,
+          x: nextX,
+          y: nextY,
+          ...(Number.isFinite(item.w) ? { w: item.w } : null),
+          ...(Number.isFinite(item.h) ? { h: item.h } : null),
         })
       },
     }),
-    [allowMaximize, baseX, baseY, isFrameless, isMaximized, isPhone, pid, setWindowFramePosition, title],
+    [
+      allowMaximize,
+      baseX,
+      baseY,
+      isFrameless,
+      isMaximized,
+      isPhone,
+      pid,
+      setWindowFramePosition,
+      storedH,
+      storedW,
+      title,
+    ],
   )
 
   const liveDelta = useDragLayer((monitor) =>
     monitor.getDifferenceFromInitialOffset(),
   )
-  const liveX = baseX + (isDragging && liveDelta ? liveDelta.x : 0)
-  const liveY = baseY + (isDragging && liveDelta ? liveDelta.y : 0)
+  const liveX =
+    liveFrame?.x ??
+    (baseX + (isDragging && liveDelta && !resizeDragRef.current ? liveDelta.x : 0))
+  const liveY =
+    liveFrame?.y ??
+    (baseY + (isDragging && liveDelta && !resizeDragRef.current ? liveDelta.y : 0))
+  const frameW = liveFrame?.w ?? storedW
+  const frameH = liveFrame?.h ?? storedH
 
   useEffect(() => {
     // Remove native browser drag ghost so the real window movement is visible.
@@ -246,6 +301,61 @@ export default function WindowFrame({
     setTitleMenu({ x, y })
   }
 
+  function onResizePointerDown(edge, event) {
+    if (!canResizeFrame) return
+    event.preventDefault()
+    event.stopPropagation()
+    const el = frameRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const origin = {
+      x: baseX,
+      y: baseY,
+      w: Number.isFinite(storedW) ? storedW : Math.round(rect.width),
+      h: Number.isFinite(storedH) ? storedH : Math.round(rect.height),
+    }
+    resizeDragRef.current = {
+      edge,
+      startX: event.clientX,
+      startY: event.clientY,
+      origin,
+    }
+    setLiveFrame(origin)
+    setActiveProgram(pid)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+
+  function onResizePointerMove(event) {
+    const drag = resizeDragRef.current
+    if (!drag) return
+    const next = resizeFrame(
+      drag.origin,
+      drag.edge,
+      { dx: event.clientX - drag.startX, dy: event.clientY - drag.startY },
+      desktopBounds(),
+    )
+    setLiveFrame(next)
+  }
+
+  function onResizePointerUp(event) {
+    const drag = resizeDragRef.current
+    if (!drag) return
+    const next = resizeFrame(
+      drag.origin,
+      drag.edge,
+      { dx: event.clientX - drag.startX, dy: event.clientY - drag.startY },
+      desktopBounds(),
+    )
+    resizeDragRef.current = null
+    setLiveFrame(null)
+    setWindowFramePosition(pid, next)
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId)
+    } catch {
+      /* already released */
+    }
+  }
+
   const framelessValue = isFrameless
     ? {
         attachDragRef: dragRef,
@@ -284,6 +394,7 @@ export default function WindowFrame({
   return (
     <FramelessWindowContext.Provider value={framelessValue}>
       <section
+        ref={frameRef}
         className={[
           'pointer-events-auto will-change-transform',
           fillsViewport ? 'max-w-none' : 'absolute',
@@ -297,6 +408,8 @@ export default function WindowFrame({
             ? ['left-0 top-0', standardRestoredFrameClasses].filter(Boolean).join(' ')
             : '',
           isDragging && !fillsViewport ? 'opacity-90' : '',
+          // Custom size overrides Tailwind w-/h- from className / standard frame.
+          Number.isFinite(frameW) || Number.isFinite(frameH) ? 'max-w-none' : '',
           className,
           fillsViewport ? '!w-full !max-w-none' : '',
         ]
@@ -305,7 +418,11 @@ export default function WindowFrame({
         style={
           fillsViewport
             ? undefined
-            : { transform: `translate(${liveX}px, ${liveY}px)` }
+            : {
+                transform: `translate(${liveX}px, ${liveY}px)`,
+                ...(Number.isFinite(frameW) ? { width: frameW } : null),
+                ...(Number.isFinite(frameH) ? { height: frameH } : null),
+              }
         }
         role="dialog"
         aria-label={title}
@@ -376,10 +493,10 @@ export default function WindowFrame({
                     shell === 'certimagic'
                   ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-0'
                   : compactRestoredFrame
-                    ? fillsViewport || isPhone
-                      ? `xp-client flex min-h-0 flex-1 flex-col overflow-hidden ${noClientPadding ? 'p-0' : 'p-4'}`
-                      : `xp-client shrink-0 overflow-visible ${noClientPadding ? 'p-0' : 'p-4'}`
-                    : 'xp-client flex min-h-0 flex-1 overflow-auto p-4'
+                    ? // Always flex+clip so apps with a fixed frame height (Paint) keep
+                      // window size on zoom; hug-content apps without height still size to children.
+                      `xp-client flex min-h-0 flex-1 flex-col overflow-hidden ${noClientPadding ? 'p-0' : 'p-4'}`
+                    : `xp-client flex min-h-0 flex-1 overflow-auto ${noClientPadding ? 'p-0' : 'p-4'}`
             }
           >
             {!isFrameless && shell === 'word' ? <WordOfficeChrome>{children}</WordOfficeChrome> : null}
@@ -411,6 +528,27 @@ export default function WindowFrame({
               : null}
           </div>
         </>
+        {canResizeFrame
+          ? RESIZE_HANDLES.map((handle) => (
+              <div
+                key={handle.edge}
+                role="separator"
+                aria-orientation={
+                  handle.edge === 'n' || handle.edge === 's'
+                    ? 'horizontal'
+                    : handle.edge === 'e' || handle.edge === 'w'
+                      ? 'vertical'
+                      : undefined
+                }
+                aria-label={`Resize window ${handle.edge}`}
+                className={`absolute z-[60] touch-none ${handle.className}`}
+                onPointerDown={(event) => onResizePointerDown(handle.edge, event)}
+                onPointerMove={onResizePointerMove}
+                onPointerUp={onResizePointerUp}
+                onPointerCancel={onResizePointerUp}
+              />
+            ))
+          : null}
         {titleMenu
           ? createPortal(
               <WindowTitleContextMenu

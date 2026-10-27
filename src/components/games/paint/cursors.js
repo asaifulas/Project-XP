@@ -1,5 +1,5 @@
 /**
- * Tool cursors as SVG data-URIs (hotspot = drawing tip).
+ * Tool cursors as SVG data-URIs (hotspot = drawing tip / brush center).
  */
 
 function cursorUrl(svg, hotX, hotY, fallback = 'crosshair') {
@@ -71,6 +71,40 @@ export const TOOL_CURSORS = {
   ellipse: cursorUrl(ELLIPSE, 15, 7, 'crosshair'),
 }
 
-export function cursorForTool(tool) {
+/**
+ * Round stamp cursor sized to the brush diameter (CSS px). Hotspot = center.
+ * @param {number} diameterCss
+ * @param {{ fill?: string, stroke?: string }} [opts]
+ */
+export function brushSizeCursor(diameterCss, opts = {}) {
+  const d = Math.max(4, Math.min(96, Math.round(diameterCss)))
+  const pad = 2
+  const size = d + pad * 2
+  const c = size / 2
+  const r = d / 2
+  const fill = opts.fill ?? 'rgba(0,0,0,0.12)'
+  const stroke = opts.stroke ?? '#000000'
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <circle cx="${c}" cy="${c}" r="${Math.max(0.5, r - 0.5)}" fill="${fill}" stroke="${stroke}" stroke-width="1"/>
+  <circle cx="${c}" cy="${c}" r="0.75" fill="${stroke}"/>
+</svg>`
+  return cursorUrl(svg, c, c, 'crosshair')
+}
+
+/**
+ * @param {string} tool
+ * @param {{ widthCss?: number, erase?: boolean }} [opts]
+ */
+export function cursorForTool(tool, opts = {}) {
+  if (
+    (tool === 'pencil' || tool === 'brush' || tool === 'eraser' || tool === 'line') &&
+    typeof opts.widthCss === 'number' &&
+    opts.widthCss > 0
+  ) {
+    return brushSizeCursor(opts.widthCss, {
+      fill: opts.erase || tool === 'eraser' ? 'rgba(242,216,74,0.35)' : 'rgba(0,0,0,0.14)',
+      stroke: opts.erase || tool === 'eraser' ? '#8a7a10' : '#000',
+    })
+  }
   return TOOL_CURSORS[tool] ?? 'crosshair'
 }

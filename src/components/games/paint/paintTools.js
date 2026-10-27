@@ -45,6 +45,9 @@ function sameColor(a, b, tolerance = 0) {
   )
 }
 
+/** Default match slack so soft AA fringes next to ink get filled (coloring-book feel). */
+export const FLOOD_FILL_TOLERANCE = 32
+
 /**
  * Flood-fill ImageData in place (scanline / BFS).
  * @param {ImageData} imageData
@@ -121,6 +124,105 @@ export function floodFill(imageData, x, y, fillRgba, tolerance = 0) {
   return filled
 }
 
+/**
+ * Outline / ink walls for watercolor pour basins (dark near-neutral strokes).
+ * Vivid paint and paper stay pourable.
+ * @param {[number, number, number, number]} rgba
+ */
+export function isPourBarrier(rgba) {
+  const [r, g, b, a] = rgba
+  if (a < 128) return true
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b
+  const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+  return lum < 165 && chroma < 48
+}
+
+function isNearBlank(rgba) {
+  return rgba[0] >= 245 && rgba[1] >= 245 && rgba[2] >= 245 && rgba[3] >= 200
+}
+
+/**
+ * Watercolor pour: blend `pourRgba` into the contiguous non-ink basin from (x,y).
+ * Near the click the pour dominates; farther pixels keep more of the existing wash.
+ * Pouring again (same or new color) layers — like adding more pigment to wet paper.
+ * @param {ImageData} imageData
+ * @param {number} x
+ * @param {number} y
+ * @param {[number, number, number, number]} pourRgba
+ * @returns {number} pixels touched
+ */
+export function pourFill(imageData, x, y, pourRgba) {
+  const { width, height, data } = imageData
+  const sx = Math.floor(x)
+  const sy = Math.floor(y)
+  if (sx < 0 || sy < 0 || sx >= width || sy >= height) return 0
+
+  const seed = colorAt(data, (sy * width + sx) * 4)
+  if (isPourBarrier(seed)) return 0
+
+  /** @type {number[]} */
+  const region = []
+  const seen = new Uint8Array(width * height)
+  /** @type {number[]} */
+  const stack = [sx, sy]
+  seen[sy * width + sx] = 1
+  let maxDist = 1
+  let blankCount = isNearBlank(seed) ? 1 : 0
+
+  while (stack.length) {
+    const cy = stack.pop()
+    const cx = stack.pop()
+    if (cx === undefined || cy === undefined) break
+    region.push(cx, cy)
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const nx = cx + dx
+      const ny = cy + dy
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+      const nidx = ny * width + nx
+      if (seen[nidx]) continue
+      const n = colorAt(data, nidx * 4)
+      if (isPourBarrier(n)) continue
+      seen[nidx] = 1
+      const d = Math.hypot(nx - sx, ny - sy)
+      if (d > maxDist) maxDist = d
+      if (isNearBlank(n)) blankCount += 1
+      stack.push(nx, ny)
+    }
+  }
+
+  if (!region.length) return 0
+
+  const pixelCount = region.length / 2
+  // Mostly paper → solid first wash; already pigmented → local layering.
+  const blankBasin = blankCount / pixelCount >= 0.7
+  let touched = 0
+  for (let i = 0; i < region.length; i += 2) {
+    const px = region[i]
+    const py = region[i + 1]
+    const dist = Math.hypot(px - sx, py - sy)
+    const t = 1 - Math.min(1, dist / maxDist)
+    // Soft falloff from pour point (watercolor bleed).
+    const falloff = t * t * (3 - 2 * t)
+    const weight = blankBasin
+      ? Math.min(1, 0.88 + 0.12 * falloff)
+      : 0.18 + 0.72 * falloff
+    const idx = (py * width + px) * 4
+    const inv = 1 - weight
+    data[idx] = Math.round(data[idx] * inv + pourRgba[0] * weight)
+    data[idx + 1] = Math.round(data[idx + 1] * inv + pourRgba[1] * weight)
+    data[idx + 2] = Math.round(data[idx + 2] * inv + pourRgba[2] * weight)
+    data[idx + 3] = 255
+    touched += 1
+  }
+
+  return touched
+}
+
 /** Classic XP Paint palette — 2 rows × 14. */
 export const DEFAULT_COLORS = [
   '#000000',
@@ -165,9 +267,22 @@ export const TOOLS = /** @type {const} */ ([
   'ellipse',
 ])
 
-export const STROKE_PRESETS = [1, 2, 3, 4, 5]
+/** Quick picks in the tool well. */
+export const STROKE_PRESETS = [1, 2, 3, 4, 5, 8, 12, 16, 24]
+export const MIN_STROKE = 1
+export const MAX_STROKE = 72
 /** Classic XP Paint zoom factors. */
 export const ZOOM_PRESETS = [1, 2, 6, 8]
+
+/**
+ * Clamp a freehand tool size (px).
+ * @param {unknown} value
+ */
+export function clampStrokeSize(value) {
+  const n = Math.round(Number(value))
+  if (!Number.isFinite(n)) return MIN_STROKE
+  return Math.min(MAX_STROKE, Math.max(MIN_STROKE, n))
+}
 
 export const MAX_UNDO = 20
 export const CANVAS_W = 640

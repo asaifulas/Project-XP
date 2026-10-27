@@ -1,0 +1,8 @@
+Jawi letter outlines in eduJawiPaths.js are extracted from:
+  Noto Naskh Arabic Regular
+  Copyright 2022 The Noto Project Authors
+  Licensed under the SIL Open Font License, Version 1.1
+  https://scripts.sil.org/OFL
+  https://github.com/notofonts/arabic
+
+Regenerate paths: node scripts/gen-jawi-paths.mjs

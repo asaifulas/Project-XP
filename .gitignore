@@ -27,3 +27,4 @@ dist-ssr
 # .trail/.gitignore (which trail owns), so teammates can still commit
 # .trail/learnings/ and .trail/README.md.
 
+scripts/fonts/
