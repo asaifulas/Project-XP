@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { floodFill, hexToRgba, pourFill, rgbaToHex } from './paintTools.js'
+import {
+  airbrushDots,
+  clampZoom,
+  fitZoomForViewport,
+  floodFill,
+  hexToRgba,
+  pourFill,
+  rgbaToHex,
+} from './paintTools.js'
 
 function pixel(img, x, y) {
   const i = (y * img.width + x) * 4
@@ -133,5 +141,35 @@ describe('pourFill (watercolor blend)', () => {
     // Red re-pour lowers green (less yellow) at the top
     expect(after[1]).toBeLessThan(before[1])
     expect(after[0]).toBeGreaterThanOrEqual(before[0] - 1)
+  })
+})
+
+describe('airbrushDots', () => {
+  it('keeps samples inside the spray radius', () => {
+    let i = 0
+    const seq = [0, 0.25, 0.5, 0.75, 0.1, 0.9, 0.3, 0.6]
+    const rng = () => seq[i++ % seq.length]
+    const dots = airbrushDots(10, 20, 8, 4, rng)
+    expect(dots).toHaveLength(4)
+    for (const d of dots) {
+      expect(Math.hypot(d.x - 10, d.y - 20)).toBeLessThanOrEqual(8.01)
+    }
+  })
+})
+
+describe('zoom helpers', () => {
+  it('clamps zoom to allowed range', () => {
+    expect(clampZoom(0)).toBe(1)
+    expect(clampZoom(0.1)).toBe(0.25)
+    expect(clampZoom(99)).toBe(8)
+    expect(clampZoom(1.555)).toBe(1.56)
+  })
+
+  it('fits A4 into a phone-sized viewport', () => {
+    const z = fitZoomForViewport(595, 842, 360, 520, 24)
+    expect(z).toBeLessThan(1)
+    expect(z).toBeGreaterThanOrEqual(0.25)
+    expect(595 * z).toBeLessThanOrEqual(360)
+    expect(842 * z).toBeLessThanOrEqual(520)
   })
 })

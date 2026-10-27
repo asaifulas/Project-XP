@@ -18,6 +18,15 @@ const BRUSH = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" vi
   <circle cx="16" cy="28" r="3" fill="#222"/>
 </svg>`
 
+const AIRBRUSH = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <path d="M10 6h6l2 10h-4z" fill="#888" stroke="#333" stroke-width="1"/>
+  <path d="M12 16h8l-2 10h-6z" fill="#555" stroke="#333" stroke-width="1"/>
+  <circle cx="8" cy="24" r="1.2" fill="#333"/>
+  <circle cx="14" cy="27" r="1" fill="#333"/>
+  <circle cx="20" cy="24" r="1.4" fill="#333"/>
+  <circle cx="17" cy="21" r="0.9" fill="#333"/>
+</svg>`
+
 const ERASER = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
   <rect x="6" y="14" width="18" height="12" rx="2" transform="rotate(-25 15 20)" fill="#f2d84a" stroke="#333" stroke-width="1"/>
   <rect x="8" y="16" width="8" height="10" transform="rotate(-25 12 21)" fill="#ffe566" stroke="#333" stroke-width="0.5"/>
@@ -62,6 +71,7 @@ const ELLIPSE = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" 
 export const TOOL_CURSORS = {
   pencil: cursorUrl(PENCIL, 4, 28, 'crosshair'),
   brush: cursorUrl(BRUSH, 16, 28, 'crosshair'),
+  airbrush: cursorUrl(AIRBRUSH, 16, 28, 'crosshair'),
   eraser: cursorUrl(ERASER, 8, 24, 'cell'),
   fill: cursorUrl(FILL, 8, 24, 'cell'),
   eyedropper: cursorUrl(DROPPER, 8, 24, 'crosshair'),
@@ -97,12 +107,21 @@ export function brushSizeCursor(diameterCss, opts = {}) {
  */
 export function cursorForTool(tool, opts = {}) {
   if (
-    (tool === 'pencil' || tool === 'brush' || tool === 'eraser' || tool === 'line') &&
+    (tool === 'pencil' ||
+      tool === 'brush' ||
+      tool === 'airbrush' ||
+      tool === 'eraser' ||
+      tool === 'line') &&
     typeof opts.widthCss === 'number' &&
     opts.widthCss > 0
   ) {
     return brushSizeCursor(opts.widthCss, {
-      fill: opts.erase || tool === 'eraser' ? 'rgba(242,216,74,0.35)' : 'rgba(0,0,0,0.14)',
+      fill:
+        opts.erase || tool === 'eraser'
+          ? 'rgba(242,216,74,0.35)'
+          : tool === 'airbrush'
+            ? 'rgba(0,0,0,0.06)'
+            : 'rgba(0,0,0,0.14)',
       stroke: opts.erase || tool === 'eraser' ? '#8a7a10' : '#000',
     })
   }

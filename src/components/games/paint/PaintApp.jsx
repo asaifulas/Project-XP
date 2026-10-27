@@ -22,14 +22,19 @@ import {
   MAX_CANVAS,
   MAX_STROKE,
   MAX_UNDO,
+  MAX_ZOOM,
   MIN_CANVAS,
   MIN_STROKE,
+  MIN_ZOOM,
   TOOLS,
   ZOOM_PRESETS,
   clampStrokeSize,
+  clampZoom,
+  fitZoomForViewport,
   hexToRgba,
   pourFill,
   rgbaToHex,
+  stampAirbrush,
 } from './paintTools.js'
 import { saveCanvasPng } from './savePng.js'
 
@@ -50,13 +55,20 @@ export default function PaintApp({ keyboardActive = true }) {
   const isPhone = usePhoneGameLayout()
   const canvasRef = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const overlayRef = useRef(/** @type {HTMLCanvasElement | null} */ (null))
+  const scrollRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   const fileRef = useRef(/** @type {HTMLInputElement | null} */ (null))
   const drawingRef = useRef(false)
   const startRef = useRef(/** @type {{ x: number, y: number } | null} */ (null))
   const lastRef = useRef(/** @type {{ x: number, y: number } | null} */ (null))
   const undoRef = useRef(/** @type {ImageData[]} */ ([]))
   const activePointerIdRef = useRef(/** @type {number | null} */ (null))
-  const mobileDrawToolRef = useRef(/** @type {'pencil' | 'brush' | 'eraser'} */ ('brush'))
+  const mobileDrawToolRef = useRef(
+    /** @type {'pencil' | 'brush' | 'airbrush' | 'eraser'} */ ('brush'),
+  )
+  const touchPointsRef = useRef(/** @type {Map<number, { x: number, y: number }>} */ (new Map()))
+  const pinchRef = useRef(
+    /** @type {null | { startDist: number, startZoom: number }} */ (null),
+  )
   const resizeDragRef = useRef(
     /** @type {null | { edge: string, startX: number, startY: number, origW: number, origH: number }} */ (null),
   )
@@ -69,6 +81,7 @@ export default function PaintApp({ keyboardActive = true }) {
   /** Independent sizes for freehand tools. */
   const [pencilSize, setPencilSize] = useState(2)
   const [brushSize, setBrushSize] = useState(8)
+  const [airbrushSize, setAirbrushSize] = useState(22)
   const [eraserSize, setEraserSize] = useState(18)
   const [zoom, setZoom] = useState(1)
   const [canvasW, setCanvasW] = useState(CANVAS_W)
@@ -214,7 +227,8 @@ export default function PaintApp({ keyboardActive = true }) {
         } else {
           setBrushSize((s) => Math.max(s, 6))
         }
-        setZoom(1)
+        // Phone Edu: fit whole A4; desktop stays 100%.
+        if (!(isPhone || preferTouchDrawing())) setZoom(1)
         setFileName(`edu-${ready.label}`)
         setEduPaintGen((n) => n + 1)
         setStatus(
@@ -329,26 +343,44 @@ export default function PaintApp({ keyboardActive = true }) {
   const widthForDrawTool = useCallback(
     (drawTool) => {
       if (drawTool === 'brush') return brushSize
+      if (drawTool === 'airbrush') return airbrushSize
       if (drawTool === 'eraser') return eraserSize
       if (drawTool === 'pencil') return pencilSize
       return stroke
     },
-    [brushSize, eraserSize, pencilSize, stroke],
+    [airbrushSize, brushSize, eraserSize, pencilSize, stroke],
   )
 
   const activeFreehandSize =
-    tool === 'brush' ? brushSize : tool === 'eraser' ? eraserSize : tool === 'pencil' ? pencilSize : stroke
+    tool === 'brush'
+      ? brushSize
+      : tool === 'airbrush'
+        ? airbrushSize
+        : tool === 'eraser'
+          ? eraserSize
+          : tool === 'pencil'
+            ? pencilSize
+            : stroke
 
   const setActiveFreehandSize = useCallback(
     (raw) => {
       const next = clampStrokeSize(raw)
       if (tool === 'brush') setBrushSize(next)
+      else if (tool === 'airbrush') setAirbrushSize(next)
       else if (tool === 'eraser') setEraserSize(next)
       else if (tool === 'pencil') setPencilSize(next)
       else setStroke(next)
-      setStatus(
-        `${tool === 'eraser' ? 'Eraser' : tool === 'brush' ? 'Brush' : tool === 'pencil' ? 'Pencil' : 'Stroke'} size: ${next}px`,
-      )
+      const label =
+        tool === 'eraser'
+          ? 'Eraser'
+          : tool === 'brush'
+            ? 'Brush'
+            : tool === 'airbrush'
+              ? 'Airbrush'
+              : tool === 'pencil'
+                ? 'Pencil'
+                : 'Stroke'
+      setStatus(`${label} size: ${next}px`)
     },
     [tool],
   )
@@ -356,6 +388,20 @@ export default function PaintApp({ keyboardActive = true }) {
   const strokeLine = useCallback(
     (ctx, from, to, opts = {}) => {
       const drawTool = opts.drawTool ?? 'pencil'
+      if (drawTool === 'airbrush') {
+        const radius = (opts.width ?? widthForDrawTool('airbrush')) / 2
+        const color = opts.color ?? fg
+        const dx = to.x - from.x
+        const dy = to.y - from.y
+        const dist = Math.hypot(dx, dy)
+        const step = Math.max(2, radius * 0.35)
+        const stamps = Math.max(1, Math.ceil(dist / step))
+        for (let i = 0; i <= stamps; i += 1) {
+          const t = stamps === 0 ? 0 : i / stamps
+          stampAirbrush(ctx, from.x + dx * t, from.y + dy * t, { radius, color })
+        }
+        return
+      }
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
@@ -375,19 +421,15 @@ export default function PaintApp({ keyboardActive = true }) {
     [bg, fg, widthForDrawTool],
   )
 
-  const enableMobileMode = useCallback(
-    (on) => {
-      setMobileMode(on)
-      if (on) {
-        setTool('brush')
-        setBrushSize((s) => Math.max(s, 6))
-        setStatus('Mobile mode — touch canvas to paint (lift finger to stop)')
-      } else {
-        setStatus('PC mode — click and drag to draw')
-      }
-    },
-    [],
-  )
+  const enableMobileMode = useCallback((on) => {
+    setMobileMode(on)
+    if (on) {
+      setBrushSize((s) => Math.max(s, 6))
+      setStatus('Mobile mode — touch canvas to paint (lift finger to stop)')
+    } else {
+      setStatus('PC mode — click and drag to draw')
+    }
+  }, [])
 
   useEffect(() => {
     if (isPhone && !mobileMode) {
@@ -521,17 +563,41 @@ export default function PaintApp({ keyboardActive = true }) {
   )
 
   const applyZoom = useCallback((next, announce = true) => {
-    const z = ZOOM_PRESETS.includes(next) ? next : 1
+    const z = clampZoom(next)
     setZoom(z)
     if (announce) setStatus(`Zoom ${z}x`)
   }, [])
+
+  const fitCanvasInView = useCallback(
+    (announce = true) => {
+      const scroller = scrollRef.current
+      if (!scroller) {
+        applyZoom(1, announce)
+        return
+      }
+      const z = fitZoomForViewport(canvasW, canvasH, scroller.clientWidth, scroller.clientHeight, 28)
+      applyZoom(z, announce)
+      if (announce) setStatus(`Show all · ${z}x`)
+    },
+    [applyZoom, canvasH, canvasW],
+  )
+
+  // Edu on phone/tablet: fit the whole A4 after the viewport lays out.
+  useLayoutEffect(() => {
+    if (!eduTemplateId || !(isPhone || preferTouchDrawing())) return
+    fitCanvasInView(false)
+  }, [eduPaintGen, eduTemplateId, fitCanvasInView, isPhone])
 
   const updateBrushPreviewFromEvent = useCallback(
     (event) => {
       const canvas = canvasRef.current
       if (!canvas) return
       const stampTool =
-        tool === 'pencil' || tool === 'brush' || tool === 'eraser' || tool === 'line'
+        tool === 'pencil' ||
+        tool === 'brush' ||
+        tool === 'airbrush' ||
+        tool === 'eraser' ||
+        tool === 'line'
           ? tool
           : mobileMode
             ? 'brush'
@@ -549,6 +615,25 @@ export default function PaintApp({ keyboardActive = true }) {
     [mobileMode, tool],
   )
 
+  const touchDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
+
+  const syncPinchFromTouches = useCallback(() => {
+    const pts = [...touchPointsRef.current.values()]
+    if (pts.length < 2) {
+      pinchRef.current = null
+      return
+    }
+    const dist = touchDistance(pts[0], pts[1])
+    if (!pinchRef.current) {
+      pinchRef.current = { startDist: dist, startZoom: zoom }
+      drawingRef.current = false
+      return
+    }
+    if (pinchRef.current.startDist < 8) return
+    const next = pinchRef.current.startZoom * (dist / pinchRef.current.startDist)
+    applyZoom(next, false)
+  }, [applyZoom, zoom])
+
   const onPointerDown = useCallback(
     (event) => {
       setMenuOpen(null)
@@ -557,11 +642,25 @@ export default function PaintApp({ keyboardActive = true }) {
       const ctx = getCtx()
       if (!canvas || !ctx) return
 
+      if (event.pointerType === 'touch') {
+        touchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        if (touchPointsRef.current.size >= 2) {
+          event.preventDefault()
+          drawingRef.current = false
+          activePointerIdRef.current = null
+          syncPinchFromTouches()
+          setStatus('Pinch to zoom')
+          return
+        }
+      }
+
       const isTouchLike =
-        event.pointerType === 'touch' || event.pointerType === 'pen' || (mobileMode && event.pointerType !== 'mouse')
+        event.pointerType === 'touch' ||
+        event.pointerType === 'pen' ||
+        (mobileMode && event.pointerType !== 'mouse')
       const useMobilePaint = mobileMode || isTouchLike
 
-      // Touch/pen: always treat contact as brush-down (ignore mouse button quirks).
+      // Touch/pen: treat contact as tool-down (ignore mouse button quirks).
       if (useMobilePaint && (event.pointerType === 'touch' || event.pointerType === 'pen')) {
         event.preventDefault()
       }
@@ -571,33 +670,12 @@ export default function PaintApp({ keyboardActive = true }) {
       const pt = canvasPoint(event)
       setCoords(`${Math.floor(pt.x)}, ${Math.floor(pt.y)}`)
 
-      // Mobile mode: finger on canvas = paint immediately (real brush feel).
-      if (useMobilePaint && (event.pointerType === 'touch' || event.pointerType === 'pen' || mobileMode)) {
-        if (event.button === 2) {
-          event.preventDefault()
-          return
-        }
-        // Keep eraser if selected; otherwise brush (or pencil if user picked it).
-        const drawTool =
-          tool === 'eraser' ? 'eraser' : tool === 'pencil' ? 'pencil' : 'brush'
-        mobileDrawToolRef.current = drawTool
-        pushUndo()
-        drawingRef.current = true
-        startRef.current = pt
-        lastRef.current = pt
-        strokeLine(ctx, pt, pt, { drawTool, erase: drawTool === 'eraser' })
-        setStatus(drawTool === 'eraser' ? 'Erasing…' : 'Painting…')
-        return
-      }
-
       if (tool === 'magnify') {
         if (event.button === 2) {
           event.preventDefault()
-          const idx = ZOOM_PRESETS.indexOf(zoom)
-          applyZoom(ZOOM_PRESETS[Math.max(0, idx - 1)] ?? 1)
-        } else if (event.button === 0) {
-          const idx = ZOOM_PRESETS.indexOf(zoom)
-          applyZoom(ZOOM_PRESETS[Math.min(ZOOM_PRESETS.length - 1, idx + 1)] ?? 8)
+          applyZoom(zoom / 1.5)
+        } else if (event.button === 0 || useMobilePaint) {
+          applyZoom(zoom * 1.5)
         }
         return
       }
@@ -615,7 +693,7 @@ export default function PaintApp({ keyboardActive = true }) {
         event.preventDefault()
         return
       }
-      if (event.button !== 0 && event.button !== -1) return
+      if (!useMobilePaint && event.button !== 0 && event.button !== -1) return
 
       if (tool === 'fill') {
         pushUndo()
@@ -624,6 +702,28 @@ export default function PaintApp({ keyboardActive = true }) {
         const n = pourFill(image, pt.x, pt.y, hexToRgba(fg))
         ctx.putImageData(image, 0, 0)
         setStatus(n ? `Poured ${n} px` : 'Nothing to fill')
+        return
+      }
+
+      // Mobile freehand: finger paints with the selected freehand tool.
+      if (
+        useMobilePaint &&
+        (tool === 'pencil' || tool === 'brush' || tool === 'airbrush' || tool === 'eraser')
+      ) {
+        const drawTool = tool
+        mobileDrawToolRef.current = drawTool
+        pushUndo()
+        drawingRef.current = true
+        startRef.current = pt
+        lastRef.current = pt
+        strokeLine(ctx, pt, pt, { drawTool, erase: drawTool === 'eraser' })
+        setStatus(
+          drawTool === 'eraser'
+            ? 'Erasing…'
+            : drawTool === 'airbrush'
+              ? 'Spraying…'
+              : 'Painting…',
+        )
         return
       }
 
@@ -636,9 +736,17 @@ export default function PaintApp({ keyboardActive = true }) {
       startRef.current = startPt
       lastRef.current = startPt
       mobileDrawToolRef.current =
-        tool === 'eraser' ? 'eraser' : tool === 'brush' ? 'brush' : tool === 'pencil' ? 'pencil' : 'brush'
+        tool === 'eraser'
+          ? 'eraser'
+          : tool === 'airbrush'
+            ? 'airbrush'
+            : tool === 'brush'
+              ? 'brush'
+              : tool === 'pencil'
+                ? 'pencil'
+                : 'brush'
 
-      if (tool === 'pencil' || tool === 'eraser' || tool === 'brush') {
+      if (tool === 'pencil' || tool === 'eraser' || tool === 'brush' || tool === 'airbrush') {
         strokeLine(ctx, startPt, startPt, { drawTool: tool, erase: tool === 'eraser' })
       }
     },
@@ -651,6 +759,7 @@ export default function PaintApp({ keyboardActive = true }) {
       pushUndo,
       snapEduPoint,
       strokeLine,
+      syncPinchFromTouches,
       tool,
       updateBrushPreviewFromEvent,
       zoom,
@@ -659,6 +768,15 @@ export default function PaintApp({ keyboardActive = true }) {
 
   const onPointerMove = useCallback(
     (event) => {
+      if (event.pointerType === 'touch' && touchPointsRef.current.has(event.pointerId)) {
+        touchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        if (touchPointsRef.current.size >= 2) {
+          event.preventDefault()
+          syncPinchFromTouches()
+          return
+        }
+      }
+
       if (activePointerIdRef.current !== null && event.pointerId !== activePointerIdRef.current) {
         return
       }
@@ -671,15 +789,10 @@ export default function PaintApp({ keyboardActive = true }) {
       if (!ctx || !startRef.current) return
 
       const drawTool = mobileDrawToolRef.current
-      const freehand =
-        mobileMode ||
-        tool === 'pencil' ||
-        tool === 'eraser' ||
-        tool === 'brush' ||
-        event.pointerType === 'touch' ||
-        event.pointerType === 'pen'
+      const isFreehandTool =
+        tool === 'pencil' || tool === 'eraser' || tool === 'brush' || tool === 'airbrush'
 
-      if (freehand && (tool === 'pencil' || tool === 'eraser' || tool === 'brush' || mobileMode)) {
+      if (isFreehandTool) {
         if (!lastRef.current) return
         event.preventDefault?.()
         const nextPt = drawTool === 'eraser' ? pt : snapEduPoint(pt)
@@ -702,9 +815,9 @@ export default function PaintApp({ keyboardActive = true }) {
       canvasPoint,
       drawShape,
       getCtx,
-      mobileMode,
       snapEduPoint,
       strokeLine,
+      syncPinchFromTouches,
       tool,
       updateBrushPreviewFromEvent,
     ],
@@ -712,6 +825,10 @@ export default function PaintApp({ keyboardActive = true }) {
 
   const endStroke = useCallback(
     (event) => {
+      if (event?.pointerType === 'touch') {
+        touchPointsRef.current.delete(event.pointerId)
+        if (touchPointsRef.current.size < 2) pinchRef.current = null
+      }
       if (activePointerIdRef.current !== null && event?.pointerId !== activePointerIdRef.current) {
         return
       }
@@ -727,7 +844,6 @@ export default function PaintApp({ keyboardActive = true }) {
         ctx &&
         startRef.current &&
         pt &&
-        !mobileMode &&
         (tool === 'line' || tool === 'rect' || tool === 'ellipse')
       ) {
         drawShape(ctx, tool, startRef.current, pt)
@@ -735,7 +851,7 @@ export default function PaintApp({ keyboardActive = true }) {
       }
       startRef.current = null
       lastRef.current = null
-      if (mobileMode) setStatus('Mobile mode — touch to paint')
+      if (mobileMode) setStatus('Mobile mode — touch to paint · pinch to zoom')
     },
     [canvasPoint, clearOverlay, drawShape, getCtx, mobileMode, tool],
   )
@@ -796,6 +912,7 @@ export default function PaintApp({ keyboardActive = true }) {
   const toolDefs = [
     { id: 'pencil', title: 'Pencil', icon: '✎' },
     { id: 'brush', title: 'Brush', icon: '●' },
+    { id: 'airbrush', title: 'Airbrush', icon: '✧' },
     { id: 'eraser', title: 'Eraser', icon: 'eraser' },
     { id: 'fill', title: 'Fill With Color', icon: '▤' },
     { id: 'eyedropper', title: 'Pick Color', icon: '⌖' },
@@ -804,6 +921,7 @@ export default function PaintApp({ keyboardActive = true }) {
     { id: 'rect', title: 'Rectangle', icon: '□' },
     { id: 'ellipse', title: 'Ellipse', icon: '○' },
   ]
+  const visibleToolDefs = toolDefs
 
   const openAttributes = useCallback(() => {
     setAttrW(String(canvasW))
@@ -829,8 +947,12 @@ export default function PaintApp({ keyboardActive = true }) {
     {
       id: 'View',
       items: [
+        { label: 'Show All', action: () => fitCanvasInView(true), bold: true },
+        { label: 'Zoom 25%', action: () => applyZoom(0.25) },
+        { label: 'Zoom 50%', action: () => applyZoom(0.5) },
         { label: 'Zoom 100%', action: () => applyZoom(1) },
         { label: 'Zoom 200%', action: () => applyZoom(2) },
+        { label: 'Zoom 400%', action: () => applyZoom(4) },
         { label: 'Zoom 600%', action: () => applyZoom(6) },
         { label: 'Zoom 800%', action: () => applyZoom(8) },
       ],
@@ -1034,9 +1156,9 @@ export default function PaintApp({ keyboardActive = true }) {
   const displayW = canvasW * zoom
   const displayH = canvasH * zoom
   const showStrokeOptions = tool !== 'magnify' && tool !== 'fill' && tool !== 'eyedropper'
-  const showZoomOptions = tool === 'magnify'
+  const showZoomOptions = tool === 'magnify' || isPhone
   const stampTool =
-    tool === 'pencil' || tool === 'brush' || tool === 'eraser'
+    tool === 'pencil' || tool === 'brush' || tool === 'airbrush' || tool === 'eraser'
       ? tool
       : tool === 'line'
         ? 'pencil'
@@ -1050,6 +1172,11 @@ export default function PaintApp({ keyboardActive = true }) {
         erase: stampTool === 'eraser',
       })
     : cursorForTool(tool)
+  const toolBtnClass = isPhone
+    ? 'flex h-8 w-8 shrink-0 items-center justify-center border text-[13px] leading-none'
+    : 'flex h-[26px] w-[26px] items-center justify-center border text-[12px] leading-none'
+  const paletteCell = isPhone ? 16 : 15
+  const fgBgBox = isPhone ? 32 : 34
 
   return (
     <div
@@ -1098,18 +1225,26 @@ export default function PaintApp({ keyboardActive = true }) {
       <div className={`flex min-h-0 flex-1 ${isPhone ? 'flex-col' : 'flex-row'}`}>
         <div
           className={`flex shrink-0 border-[#808080] bg-[#c0c0c0] ${
-            isPhone ? 'order-2 flex-row items-start gap-1 overflow-x-auto border-t p-1' : 'w-[58px] flex-col border-r'
+            isPhone
+              ? 'order-2 flex-col gap-0.5 border-t px-1 py-0.5'
+              : 'w-[58px] flex-col border-r'
           }`}
         >
-          <div className={`grid grid-cols-2 gap-0 border border-[#808080] bg-[#c0c0c0] p-0.5 ${isPhone ? '' : 'm-0.5'}`}>
-            {toolDefs.map((t) => (
+          <div
+            className={
+              isPhone
+                ? 'flex flex-row items-center gap-0.5 overflow-x-auto'
+                : `m-0.5 grid grid-cols-2 gap-0 border border-[#808080] bg-[#c0c0c0] p-0.5`
+            }
+          >
+            {visibleToolDefs.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 title={t.title}
                 aria-label={t.title}
                 aria-pressed={tool === t.id}
-                className={`flex h-[26px] w-[26px] items-center justify-center border text-[12px] leading-none ${
+                className={`${toolBtnClass} ${
                   tool === t.id
                     ? 'border-[#808080] bg-[#c0c0c0] shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff]'
                     : 'border-transparent bg-[#c0c0c0] shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] hover:border-[#808080]'
@@ -1121,7 +1256,9 @@ export default function PaintApp({ keyboardActive = true }) {
               >
                 {t.icon === 'eraser' ? (
                   <span
-                    className="block h-[10px] w-[14px] rotate-[-20deg] border border-[#333] bg-[#f2d84a] shadow-[inset_-2px_0_0_#ffe566]"
+                    className={`block rotate-[-20deg] border border-[#333] bg-[#f2d84a] shadow-[inset_-2px_0_0_#ffe566] ${
+                      isPhone ? 'h-2.5 w-4' : 'h-[10px] w-[14px]'
+                    }`}
                     aria-hidden
                   />
                 ) : (
@@ -1132,40 +1269,79 @@ export default function PaintApp({ keyboardActive = true }) {
           </div>
 
           <div
-            className={`flex flex-col items-center justify-center gap-1.5 border border-[#808080] bg-[#c0c0c0] p-1.5 ${
-              isPhone ? 'min-w-[56px]' : 'mx-0.5 mb-0.5 min-h-[96px] w-[52px]'
+            className={`flex items-center justify-center gap-1 border border-[#808080] bg-[#c0c0c0] ${
+              isPhone
+                ? 'h-7 flex-row flex-nowrap px-1'
+                : 'mx-0.5 mb-0.5 min-h-[96px] w-[52px] flex-col p-1.5'
             }`}
             onClick={(event) => event.stopPropagation()}
           >
-            {showZoomOptions
-              ? ZOOM_PRESETS.map((z) => (
-                  <button
-                    key={z}
-                    type="button"
-                    title={`${z}x`}
-                    className={`w-10 px-0.5 text-center text-[10px] ${
-                      zoom === z ? 'bg-[#000080] text-white' : 'hover:bg-[#000080]/20'
-                    }`}
-                    onClick={() => applyZoom(z)}
-                  >
-                    {z}x
-                  </button>
-                ))
-              : null}
+            {showZoomOptions ? (
+              <div
+                className={`flex items-center gap-0.5 ${isPhone ? 'min-w-0 flex-1' : 'flex-col'}`}
+              >
+                {isPhone || tool === 'magnify' ? (
+                  <>
+                    <input
+                      type="range"
+                      min={MIN_ZOOM}
+                      max={MAX_ZOOM}
+                      step={0.05}
+                      value={zoom}
+                      onChange={(event) => applyZoom(Number(event.target.value))}
+                      className={`accent-[#000080] ${isPhone ? 'h-4 min-w-0 flex-1' : 'h-16 w-3'}`}
+                      style={isPhone ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
+                      aria-label="Zoom"
+                      title={`Zoom ${zoom}x`}
+                    />
+                    <button
+                      type="button"
+                      className={`shrink-0 border border-[#808080] bg-[#c0c0c0] px-1 text-[9px] font-bold leading-none shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] ${
+                        isPhone ? 'h-5' : 'w-10 py-1'
+                      }`}
+                      onClick={() => fitCanvasInView(true)}
+                      title="Fit canvas in view"
+                    >
+                      All
+                    </button>
+                    <span className="shrink-0 text-[9px] tabular-nums text-black/70">
+                      {zoom < 1 ? zoom.toFixed(2) : zoom.toFixed(zoom % 1 ? 2 : 0)}x
+                    </span>
+                  </>
+                ) : (
+                  ZOOM_PRESETS.filter((z) => z >= 1).map((z) => (
+                    <button
+                      key={z}
+                      type="button"
+                      title={`${z}x`}
+                      className={`w-10 px-0.5 text-center text-[10px] ${
+                        zoom === z ? 'bg-[#000080] text-white' : 'hover:bg-[#000080]/20'
+                      }`}
+                      onClick={() => applyZoom(z)}
+                    >
+                      {z}x
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
             {showStrokeOptions ? (
               <>
                 <div
-                  className="flex h-10 w-10 items-center justify-center border border-[#808080] bg-white shadow-[inset_1px_1px_0_#fff]"
+                  className={`flex shrink-0 items-center justify-center border border-[#808080] bg-white shadow-[inset_1px_1px_0_#fff] ${
+                    isPhone ? 'h-5 w-5' : 'h-10 w-10'
+                  }`}
                   title={`${activeFreehandSize}px`}
                   aria-hidden
                 >
                   <span
                     className="block rounded-full"
                     style={{
-                      width: Math.min(36, Math.max(2, activeFreehandSize)),
-                      height: Math.min(36, Math.max(2, activeFreehandSize)),
+                      width: Math.min(isPhone ? 14 : 36, Math.max(2, activeFreehandSize * (isPhone ? 0.45 : 1))),
+                      height: Math.min(isPhone ? 14 : 36, Math.max(2, activeFreehandSize * (isPhone ? 0.45 : 1))),
                       background: tool === 'eraser' ? '#f2d84a' : fg,
                       border: tool === 'eraser' ? '1px solid #8a7a10' : '1px solid rgba(0,0,0,0.35)',
+                      opacity: tool === 'airbrush' ? 0.55 : 1,
                     }}
                   />
                 </div>
@@ -1175,11 +1351,11 @@ export default function PaintApp({ keyboardActive = true }) {
                   max={MAX_STROKE}
                   value={activeFreehandSize}
                   onChange={(event) => setActiveFreehandSize(event.target.value)}
-                  className={`accent-[#000080] ${isPhone ? 'w-16' : 'h-16 w-3'}`}
+                  className={`accent-[#000080] ${isPhone ? 'h-4 min-w-[64px] flex-1' : 'h-16 w-3'}`}
                   style={isPhone ? undefined : { writingMode: 'vertical-lr', direction: 'rtl' }}
                   aria-label="Tool size"
                 />
-                <span className="text-[9px] tabular-nums text-black/70">{activeFreehandSize}</span>
+                <span className="shrink-0 text-[9px] tabular-nums text-black/70">{activeFreehandSize}</span>
               </>
             ) : null}
             {!showStrokeOptions && !showZoomOptions ? (
@@ -1189,6 +1365,7 @@ export default function PaintApp({ keyboardActive = true }) {
         </div>
 
         <div
+          ref={scrollRef}
           className={`min-h-0 flex-1 overflow-auto bg-[#808080] ${isPhone ? 'order-1' : ''}`}
           style={{
             backgroundImage:
@@ -1196,6 +1373,7 @@ export default function PaintApp({ keyboardActive = true }) {
             backgroundSize: '16px 16px',
             backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0',
             backgroundColor: '#808080',
+            touchAction: 'none',
           }}
         >
           <div className="inline-block p-1 pb-4 pr-4">
@@ -1278,47 +1456,71 @@ export default function PaintApp({ keyboardActive = true }) {
       </div>
 
       <div
-        className="flex shrink-0 items-center gap-2 bg-[#c0c0c0] px-2 py-1"
+        className={`flex shrink-0 items-center gap-1.5 bg-[#c0c0c0] ${isPhone ? 'px-1.5 py-0.5' : 'px-2 py-1'}`}
         style={{ borderTop: '1px solid #fff', borderBottom: '1px solid #808080' }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative h-[34px] w-[34px] shrink-0 border border-[#808080] bg-[#c0c0c0] shadow-[inset_1px_1px_0_#fff]">
+        <div
+          className="relative shrink-0 border border-[#808080] bg-[#c0c0c0] shadow-[inset_1px_1px_0_#fff]"
+          style={{ width: fgBgBox, height: fgBgBox }}
+        >
           <div
-            className="absolute left-[14px] top-[14px] h-4 w-4 border border-black"
-            style={{ background: bg }}
+            className="absolute border border-black"
+            style={{
+              background: bg,
+              width: isPhone ? 14 : 16,
+              height: isPhone ? 14 : 16,
+              left: isPhone ? 14 : 14,
+              top: isPhone ? 14 : 14,
+            }}
             title="Background"
           />
           <div
-            className="absolute left-[6px] top-[6px] z-[1] h-4 w-4 border border-black"
-            style={{ background: fg }}
+            className="absolute z-[1] border border-black"
+            style={{
+              background: fg,
+              width: isPhone ? 14 : 16,
+              height: isPhone ? 14 : 16,
+              left: isPhone ? 4 : 6,
+              top: isPhone ? 4 : 6,
+            }}
             title="Foreground"
           />
         </div>
         <div
-          className="grid gap-0 border border-[#808080] bg-[#c0c0c0] p-0.5"
-          style={{ gridTemplateColumns: 'repeat(14, 15px)' }}
+          className="min-w-0 flex-1 overflow-x-auto"
         >
-          {DEFAULT_COLORS.map((c, i) => (
-            <button
-              key={`${c}-${i}`}
-              type="button"
-              className="h-[15px] w-[15px] border border-[#808080]"
-              style={{ background: c }}
-              title={`${c} — left: color 1, right: color 2`}
-              aria-label={`Palette ${c}`}
-              onClick={() => setFg(c)}
-              onContextMenu={(event) => {
-                event.preventDefault()
-                setBg(c)
-              }}
-            />
-          ))}
+          <div
+            className="grid gap-0 border border-[#808080] bg-[#c0c0c0] p-0.5"
+            style={{
+              gridTemplateColumns: `repeat(14, ${paletteCell}px)`,
+              width: 14 * paletteCell + 4,
+            }}
+          >
+            {DEFAULT_COLORS.map((c, i) => (
+              <button
+                key={`${c}-${i}`}
+                type="button"
+                className="border border-[#808080]"
+                style={{ background: c, width: paletteCell, height: paletteCell }}
+                title={`${c} — left: color 1, right: color 2`}
+                aria-label={`Palette ${c}`}
+                onClick={() => setFg(c)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setBg(c)
+                }}
+              />
+            ))}
+          </div>
         </div>
         <input
           type="color"
           value={fg}
           onChange={(event) => setFg(event.target.value)}
-          className="ml-1 h-7 w-8 cursor-pointer border border-[#808080] bg-[#c0c0c0]"
+          className={`ml-0.5 cursor-pointer border border-[#808080] bg-[#c0c0c0] ${
+            isPhone ? 'h-7 w-8' : 'h-7 w-8'
+          }`}
           aria-label="Edit colors"
           title="Edit Colors"
         />

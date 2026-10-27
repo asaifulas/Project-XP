@@ -258,6 +258,7 @@ export const DEFAULT_COLORS = [
 export const TOOLS = /** @type {const} */ ([
   'pencil',
   'brush',
+  'airbrush',
   'eraser',
   'fill',
   'eyedropper',
@@ -271,8 +272,10 @@ export const TOOLS = /** @type {const} */ ([
 export const STROKE_PRESETS = [1, 2, 3, 4, 5, 8, 12, 16, 24]
 export const MIN_STROKE = 1
 export const MAX_STROKE = 72
-/** Classic XP Paint zoom factors. */
-export const ZOOM_PRESETS = [1, 2, 6, 8]
+/** Classic XP Paint zoom factors (plus zoom-out for Edu / phones). */
+export const ZOOM_PRESETS = [0.25, 0.5, 1, 2, 4, 6, 8]
+export const MIN_ZOOM = 0.25
+export const MAX_ZOOM = 8
 
 /**
  * Clamp a freehand tool size (px).
@@ -282,6 +285,75 @@ export function clampStrokeSize(value) {
   const n = Math.round(Number(value))
   if (!Number.isFinite(n)) return MIN_STROKE
   return Math.min(MAX_STROKE, Math.max(MIN_STROKE, n))
+}
+
+/**
+ * Clamp canvas zoom factor.
+ * @param {unknown} value
+ */
+export function clampZoom(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return 1
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(n * 100) / 100))
+}
+
+/**
+ * Zoom that fits the document into a scroll viewport (with padding).
+ * @param {number} canvasW
+ * @param {number} canvasH
+ * @param {number} viewW
+ * @param {number} viewH
+ * @param {number} [pad]
+ */
+export function fitZoomForViewport(canvasW, canvasH, viewW, viewH, pad = 24) {
+  if (canvasW <= 0 || canvasH <= 0 || viewW <= 0 || viewH <= 0) return 1
+  const availW = Math.max(1, viewW - pad)
+  const availH = Math.max(1, viewH - pad)
+  return clampZoom(Math.min(availW / canvasW, availH / canvasH))
+}
+
+/**
+ * Soft spray sample points (denser toward the center).
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} radius
+ * @param {number} count
+ * @param {() => number} [rng]
+ * @returns {{ x: number, y: number }[]}
+ */
+export function airbrushDots(cx, cy, radius, count, rng = Math.random) {
+  const r = Math.max(1, radius)
+  const n = Math.max(0, Math.floor(count))
+  /** @type {{ x: number, y: number }[]} */
+  const dots = []
+  for (let i = 0; i < n; i += 1) {
+    const a = rng() * Math.PI * 2
+    // sqrt → more dots near center (airbrush plume)
+    const dist = Math.sqrt(rng()) * r
+    dots.push({ x: cx + Math.cos(a) * dist, y: cy + Math.sin(a) * dist })
+  }
+  return dots
+}
+
+/**
+ * Stamp soft spray into a 2D context at (x, y).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {{ radius: number, color: string, density?: number, rng?: () => number }} opts
+ */
+export function stampAirbrush(ctx, x, y, opts) {
+  const radius = Math.max(1, opts.radius)
+  const density = opts.density ?? 0.55
+  const count = Math.max(6, Math.round(radius * radius * density * 0.35))
+  const dots = airbrushDots(x, y, radius, count, opts.rng)
+  ctx.save()
+  ctx.fillStyle = opts.color
+  for (const d of dots) {
+    const s = 1 + (radius > 12 ? 1 : 0)
+    ctx.fillRect(Math.round(d.x), Math.round(d.y), s, s)
+  }
+  ctx.restore()
 }
 
 export const MAX_UNDO = 20
