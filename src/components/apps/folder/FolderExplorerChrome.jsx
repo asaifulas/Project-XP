@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { MyComputerDetailsPane } from './MyComputerContent'
+import { getAppById } from '../../../registry/apps'
 import { useShellStore } from '../../../stores/useShellStore'
+import { MyComputerDetailsPane } from './MyComputerContent'
 import { useFolderNavigation } from './FolderNavigationContext'
+import {
+  FolderSelectionProvider,
+  useFolderSelection,
+} from './FolderSelectionContext'
 
 /** Small yellow folder glyph (XP-style) */
 function MiniFolder({ className = 'h-3.5 w-4' }) {
@@ -115,15 +120,44 @@ function NavOrb({ dir, disabled, onClick }) {
   )
 }
 
+function SelectionDetails() {
+  const { selected } = useFolderSelection()
+  if (!selected) {
+    return (
+      <p className="px-0.5 text-[10px] leading-snug text-[#4a5568]">
+        Select an item in the view to read its description.
+      </p>
+    )
+  }
+  return (
+    <div className="space-y-1 px-0.5 text-[10px] leading-snug text-[#1a1a1a]">
+      <p className="m-0 break-all font-bold">{selected.name}</p>
+      {selected.typeLabel ? <p className="m-0 text-[#4a5568]">Type: {selected.typeLabel}</p> : null}
+      {selected.kind === 'image' && selected.width && selected.height ? (
+        <p className="m-0 text-[#4a5568]">
+          Dimensions: {selected.width} × {selected.height}
+        </p>
+      ) : null}
+      {selected.kind === 'image' && selected.src ? (
+        <div className="mt-1 overflow-hidden border border-[#7aa6d8] bg-white p-0.5">
+          <img src={selected.src} alt="" className="mx-auto max-h-16 max-w-full object-contain" />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 /**
  * Windows XP Explorer–style host: menu, standard-buttons toolbar, address bar, task pane, main pane.
  *
- * @param {'default' | 'myComputer'} [variant]
+ * @param {'default' | 'myComputer' | 'pictures'} [variant]
  */
 export default function FolderExplorerChrome({ addressPath, children, variant = 'default' }) {
   const menuItems = ['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']
   const isMyComputer = variant === 'myComputer'
+  const isPictures = variant === 'pictures'
   const setSystemPropertiesOpen = useShellStore((s) => s.setSystemPropertiesOpen)
+  const setWallpaperSettingsOpen = useShellStore((s) => s.setWallpaperSettingsOpen)
   const AddressIcon = isMyComputer ? MiniComputer : MiniFolder
   const {
     canBack,
@@ -133,6 +167,7 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
     goForward,
     goUp,
     goToAddress,
+    openFolder,
     addressPath: liveAddressPath,
     addressHistory,
     active: navActive,
@@ -169,6 +204,7 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
     'border-b border-[#aca899] bg-[linear-gradient(180deg,#fffcf8_0%,#f0ebe0_40%,#e4dfd4_100%)] shadow-[inset_0_1px_0_#fff]'
 
   return (
+    <FolderSelectionProvider>
     <div className="flex min-h-0 flex-1 flex-col bg-[#ece9d8] font-xp text-[11px] text-black">
       {/* Menu — Luna beige strip */}
       <nav
@@ -384,6 +420,56 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
                 <MyComputerDetailsPane />
               </TaskPaneSection>
             </>
+          ) : isPictures ? (
+            <>
+              <TaskPaneSection title="Picture Tasks">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="View as a slide show" disabled />
+                  </li>
+                  <li>
+                    <TaskLink
+                      icon={<MiniFolder />}
+                      label="Set as desktop background"
+                      onClick={() => setWallpaperSettingsOpen(true)}
+                    />
+                  </li>
+                </ul>
+              </TaskPaneSection>
+
+              <TaskPaneSection title="File and Folder Tasks">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Make a new folder" disabled />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniFolder />} label="Publish this folder to the Web" disabled />
+                  </li>
+                </ul>
+              </TaskPaneSection>
+
+              <TaskPaneSection title="Other Places">
+                <ul className="space-y-0">
+                  <li>
+                    <TaskLink
+                      icon={<MiniFolder />}
+                      label="Gallery"
+                      onClick={() => {
+                        const gallery = getAppById('gallery_folder')
+                        if (gallery) openFolder(gallery)
+                      }}
+                    />
+                  </li>
+                  <li>
+                    <TaskLink icon={<MiniComputer />} label="My Computer" disabled />
+                  </li>
+                </ul>
+              </TaskPaneSection>
+
+              <TaskPaneSection title="Details">
+                <SelectionDetails />
+              </TaskPaneSection>
+            </>
           ) : (
             <>
               <TaskPaneSection title="File and Folder Tasks">
@@ -421,16 +507,15 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               </TaskPaneSection>
 
               <TaskPaneSection title="Details">
-                <p className="px-0.5 text-[10px] leading-snug text-[#4a5568]">
-                  Select an item in the view to read its description.
-                </p>
+                <SelectionDetails />
               </TaskPaneSection>
             </>
           )}
         </aside>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-white">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">{children}</div>
       </div>
     </div>
+    </FolderSelectionProvider>
   )
 }

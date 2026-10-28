@@ -43,6 +43,11 @@ import paintIcon from '../assets/icons/paint.svg'
 import CalculatorApp from '../components/apps/calculator/CalculatorApp'
 import ExcelApp from '../components/apps/excel/ExcelApp'
 import FolderApp from '../components/apps/folder/FolderApp'
+import {
+  galleryAppIdForDir,
+  galleryDirLabel,
+  listGalleryDirs,
+} from '../components/apps/folder/galleryMedia'
 import InternetExplorerApp from '../components/apps/ie/InternetExplorerApp'
 import PdfReaderApp from '../components/apps/pdf/PdfReaderApp'
 import WinampApp from '../components/apps/winamp/WinampApp'
@@ -175,6 +180,10 @@ function folderApp({
   explorerAddressPath,
   desktop = undefined,
   path = '/folder',
+  group = 'Playground',
+  folderView = 'icons',
+  galleryDir = null,
+  explorerVariant = undefined,
 }) {
   return {
     id,
@@ -182,20 +191,49 @@ function folderApp({
     page: FolderPage,
     title,
     icon: myDocsIcon,
-    group: 'Playground',
+    group,
     folderLabel: folderLabel ?? title,
     ...(desktop ? { desktop } : {}),
     stackable: true,
     children,
+    folderView,
+    galleryDir,
     window: {
       showMenuBar: false,
       className: '',
       shell: 'folder',
       explorerAddressPath,
+      ...(explorerVariant ? { explorerVariant } : {}),
     },
-    renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
+    renderStack: ({ app }) =>
+      createElement(FolderApp, {
+        childAppIds: app?.children ?? [],
+        folderView: app?.folderView ?? 'icons',
+        galleryDir: app?.galleryDir ?? null,
+      }),
   }
 }
+
+/** One Explorer folder per `src/assets/gallery/<dir>/` (auto-discovered). */
+function buildGallerySubfolderApps() {
+  return listGalleryDirs().map((dir) => {
+    const label = galleryDirLabel(dir)
+    return folderApp({
+      id: galleryAppIdForDir(dir),
+      title: label,
+      folderLabel: label,
+      group: 'Gallery',
+      children: [],
+      folderView: 'filmstrip',
+      galleryDir: dir,
+      explorerVariant: 'pictures',
+      explorerAddressPath: `C:\\Documents and Settings\\Gallery\\${label}`,
+    })
+  })
+}
+
+const gallerySubfolderApps = buildGallerySubfolderApps()
+const galleryChildIds = gallerySubfolderApps.map((app) => app.id)
 
 function playgroundReadme({ id, fileName, readmeId }) {
   return {
@@ -325,15 +363,21 @@ export const APPS = [
     group: 'Gallery',
     desktop: { label: 'Gallery', order: 5 },
     stackable: true,
-    children: [],
+    children: galleryChildIds,
     window: {
       showMenuBar: false,
       className: '',
       shell: 'folder',
       explorerAddressPath: 'C:\\Documents and Settings\\Gallery',
     },
-    renderStack: ({ app }) => createElement(FolderApp, { childAppIds: app?.children ?? [] }),
+    renderStack: ({ app }) =>
+      createElement(FolderApp, {
+        childAppIds: app?.children ?? [],
+        folderView: app?.folderView ?? 'icons',
+        galleryDir: app?.galleryDir ?? null,
+      }),
   },
+  ...gallerySubfolderApps,
   folderApp({
     id: 'playground_folder',
     path: '/playground',

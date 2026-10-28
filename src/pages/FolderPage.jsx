@@ -41,7 +41,11 @@ export default function FolderPage() {
           explorerAddressPath={shell === 'folder' ? addressPath : undefined}
           explorerVariant={win.explorerVariant}
         >
-          <FolderApp childAppIds={app?.children ?? []} />
+          <FolderApp
+            childAppIds={app?.children ?? []}
+            folderView={app?.folderView ?? 'icons'}
+            galleryDir={app?.galleryDir ?? null}
+          />
         </WindowFrame>
       </div>
     </FolderNavigationProvider>

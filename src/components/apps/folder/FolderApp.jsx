@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getAppById, isFolderApp } from '../../../registry/apps'
 import XpIconImage from '../../desktop/XpIconImage'
+import FilmstripFolderView from './FilmstripFolderView'
 import { useFolderNavigation } from './FolderNavigationContext'
+import { useFolderSelection } from './FolderSelectionContext'
 
 /** @param {{ folderLabel?: string, desktop?: { label?: string }, title?: string, id: string } | null | undefined} app */
 function folderItemLabel(app) {
@@ -10,15 +12,32 @@ function folderItemLabel(app) {
 }
 
 /**
- * Folder window body: large-icon list of nested registry shortcuts.
- * Folders browse in the same Explorer window; files/apps open new windows.
+ * Icon grid body (classic large icons).
  * @param {{ childAppIds?: string[] }} props
  */
-export default function FolderApp({ childAppIds = [] }) {
+function IconsFolderView({ childAppIds = [] }) {
   const { openItem } = useFolderNavigation()
+  const { setSelected } = useFolderSelection()
   const [selectedId, setSelectedId] = useState(null)
   const items = childAppIds.map((id) => getAppById(id)).filter(Boolean)
   const empty = items.length === 0
+
+  useEffect(() => {
+    if (!selectedId) {
+      setSelected(null)
+      return
+    }
+    const app = getAppById(selectedId)
+    if (!app) {
+      setSelected(null)
+      return
+    }
+    setSelected({
+      kind: isFolderApp(app) ? 'folder' : 'file',
+      name: folderItemLabel(app),
+      typeLabel: isFolderApp(app) ? 'File Folder' : 'Application',
+    })
+  }, [selectedId, setSelected])
 
   return (
     <div
@@ -76,4 +95,23 @@ export default function FolderApp({ childAppIds = [] }) {
       )}
     </div>
   )
+}
+
+/**
+ * Folder window body: large-icon list, or XP Filmstrip for picture galleries.
+ * @param {{
+ *   childAppIds?: string[],
+ *   folderView?: 'icons' | 'filmstrip',
+ *   galleryDir?: string | null,
+ * }} props
+ */
+export default function FolderApp({
+  childAppIds = [],
+  folderView = 'icons',
+  galleryDir = null,
+}) {
+  if (folderView === 'filmstrip' && galleryDir) {
+    return <FilmstripFolderView galleryDir={galleryDir} childAppIds={childAppIds} />
+  }
+  return <IconsFolderView childAppIds={childAppIds} />
 }
