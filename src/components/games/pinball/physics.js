@@ -10,6 +10,9 @@ import {
   batSegment,
 } from './table.js'
 
+/** Share of the flipper's surface speed passed to the ball on a hit. */
+const FLIPPER_KICK_GAIN = 1.0
+
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n))
 }
@@ -38,8 +41,9 @@ function closestOnSegment(px, py, ax, ay, bx, by) {
  * Left pivot aims rightward; right pivot aims leftward.
  */
 export function flipperSegment(pivot, side, angle) {
-  const facing = side === 'left' ? 0 : Math.PI
-  const a = facing + angle
+  // Mirror image: the right flipper swings the other way, so both hang down at rest
+  // and both kick up when pressed.
+  const a = side === 'left' ? angle : Math.PI - angle
   return {
     ax: pivot.x,
     ay: pivot.y,
@@ -303,8 +307,16 @@ function probeSegment(ball, seg, flipperState) {
     restitution = FLIPPER_RESTITUTION
     const pressed = seg.side === 'left' ? flipperState.leftPressed : flipperState.rightPressed
     if (pressed) {
-      kickX = n.x * 320 * 0.2
-      kickY = n.y * 320
+      // The ball is thrown by the flipper's surface speed at the contact point:
+      // strong near the tip, weak near the pivot, and only while the arm is swinging up.
+      const dAngle = (seg.side === 'left' ? -1 : 1) * FLIPPER.speed
+      const s = length(closest.x - seg.ax, closest.y - seg.ay)
+      const a = Math.atan2(seg.by - seg.ay, seg.bx - seg.ax)
+      const surfaceVx = -Math.sin(a) * dAngle * s
+      const surfaceVy = Math.cos(a) * dAngle * s
+      const along = Math.max(0, surfaceVx * n.x + surfaceVy * n.y) * FLIPPER_KICK_GAIN
+      kickX = n.x * along
+      kickY = n.y * along
     }
   }
 

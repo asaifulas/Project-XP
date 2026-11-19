@@ -18,13 +18,6 @@
       "slug": "coloring-book-dog-ilio"
     },
     {
-      "id": "fish",
-      "category": "animals",
-      "label": "Fish",
-      "oclId": 273123,
-      "slug": "trace-or-cut-out-and-color-the-fish"
-    },
-    {
       "id": "bird",
       "category": "animals",
       "label": "Bird",
@@ -37,13 +30,6 @@
       "label": "Butterfly",
       "oclId": 352671,
       "slug": "simple-detailed-butterfly-lineart"
-    },
-    {
-      "id": "elephant",
-      "category": "animals",
-      "label": "Elephant",
-      "oclId": 12749,
-      "slug": "elephant-outline"
     },
     {
       "id": "rabbit",
@@ -67,13 +53,6 @@
       "slug": "lion-line-art"
     },
     {
-      "id": "bear",
-      "category": "animals",
-      "label": "Bear",
-      "oclId": 195906,
-      "slug": "coloring-book-grizzly"
-    },
-    {
       "id": "owl",
       "category": "animals",
       "label": "Owl",
@@ -86,41 +65,6 @@
       "label": "Shark",
       "oclId": 330219,
       "slug": "great-white-shark-line-art"
-    },
-    {
-      "id": "pig",
-      "category": "animals",
-      "label": "Pig",
-      "oclId": 177040,
-      "slug": "zeldas-pig"
-    },
-    {
-      "id": "turtle",
-      "category": "animals",
-      "label": "Turtle",
-      "oclId": 354473,
-      "slug": "turtle"
-    },
-    {
-      "id": "penguin",
-      "category": "animals",
-      "label": "Penguin",
-      "oclId": 330246,
-      "slug": "cute-penguin-head"
-    },
-    {
-      "id": "airplane",
-      "category": "transportation",
-      "label": "Airplane",
-      "oclId": 173951,
-      "slug": "airplane-silhouette"
-    },
-    {
-      "id": "biplane",
-      "category": "transportation",
-      "label": "Biplane",
-      "oclId": 319632,
-      "slug": "biplane-outline-1918"
     },
     {
       "id": "prop-plane",
@@ -144,46 +88,11 @@
       "slug": "simple-side-of-car"
     },
     {
-      "id": "bicycle",
-      "category": "transportation",
-      "label": "Bicycle",
-      "oclId": 26979,
-      "slug": "bicycle"
-    },
-    {
-      "id": "helicopter",
-      "category": "transportation",
-      "label": "Helicopter",
-      "oclId": 324037,
-      "slug": "big-helicopter-outline"
-    },
-    {
       "id": "rocket",
       "category": "transportation",
       "label": "Rocket",
       "oclId": 272531,
       "slug": "rocket-coloring-page"
-    },
-    {
-      "id": "sailboat",
-      "category": "transportation",
-      "label": "Sailboat",
-      "oclId": 298680,
-      "slug": "sail-ship-2-masts-outline"
-    },
-    {
-      "id": "train",
-      "category": "transportation",
-      "label": "Train",
-      "oclId": 306359,
-      "slug": "toy-train-outline"
-    },
-    {
-      "id": "submarine",
-      "category": "transportation",
-      "label": "Submarine",
-      "oclId": 329963,
-      "slug": "submarine4-21gkg"
     },
     {
       "id": "flower",
@@ -212,13 +121,6 @@
       "label": "Mushroom",
       "oclId": 246716,
       "slug": "toadstool-lineart"
-    },
-    {
-      "id": "cactus",
-      "category": "plants",
-      "label": "Cactus",
-      "oclId": 24040,
-      "slug": "cactus"
     },
     {
       "id": "house",
@@ -263,13 +165,6 @@
       "slug": "sun-line-art"
     },
     {
-      "id": "snowflake",
-      "category": "nature",
-      "label": "Snowflake",
-      "oclId": 279895,
-      "slug": "flat-white-snowflake-with-hollow-circular-center"
-    },
-    {
       "id": "balloon",
       "category": "objects",
       "label": "Balloon",
@@ -277,11 +172,67 @@
       "slug": "lutz-balloon-flipped"
     },
     {
-      "id": "trophy",
+      "id": "airplane",
+      "category": "transportation",
+      "label": "Airplane",
+      "oclId": 324035,
+      "slug": "small-plane-outline"
+    },
+    {
+      "id": "bicycle",
+      "category": "transportation",
+      "label": "Bicycle",
+      "oclId": 301073,
+      "slug": "bike-3-outline"
+    },
+    {
+      "id": "ship",
+      "category": "transportation",
+      "label": "Ship",
+      "oclId": 22646,
+      "slug": "bark-ship"
+    },
+    {
+      "id": "tree",
+      "category": "plants",
+      "label": "Tree",
+      "oclId": 213774,
+      "slug": "tree-lineart"
+    },
+    {
+      "id": "daisy",
+      "category": "plants",
+      "label": "Daisy",
+      "oclId": 214395,
+      "slug": "flower-lineart"
+    },
+    {
+      "id": "cupcake",
+      "category": "food",
+      "label": "Cupcake",
+      "oclId": 330247,
+      "slug": "cute-owl-cupcake"
+    },
+    {
+      "id": "icecream",
+      "category": "food",
+      "label": "Ice cream",
+      "oclId": 273240,
+      "slug": "ice-cream-line-art"
+    },
+    {
+      "id": "cloud",
+      "category": "nature",
+      "label": "Cloud",
+      "oclId": 344407,
+      "slug": "cloud-banner-with-transparent-background"
+    },
+    {
+      "id": "book",
       "category": "objects",
-      "label": "Trophy",
-      "oclId": 303459,
-      "slug": "sketched-trophy"
+      "label": "Book",
+      "oclId": 355258,
+      "slug": "white-open-book-being-read"
     }
   ],
   "failed": []

@@ -74,20 +74,20 @@ describe('eduClipart (Openclipart SVG pack)', () => {
     expect(total).toBeGreaterThan(20)
   })
 
-  it('keeps airplane svg markup and a bounded path count', () => {
-    expect(getClipartSvg('airplane')).toContain('<svg')
-    const strokes = getClipartPaths('airplane')
+  it('keeps apple svg markup and a bounded path count', () => {
+    expect(getClipartSvg('apple')).toContain('<svg')
+    const strokes = getClipartPaths('apple')
     const pts = strokes.reduce((n, s) => n + s.length, 0)
     expect(strokes.length).toBeGreaterThan(0)
     expect(strokes.length).toBeLessThanOrEqual(14)
     expect(pts).toBeLessThan(2000)
-    expect(getClipartLabel('airplane').toLowerCase()).toMatch(/plane|airplane/)
+    expect(getClipartLabel('apple').toLowerCase()).toMatch(/apple/)
   })
 
-  it('resolves airplane via getEduTemplate with svgMarkup', () => {
+  it('resolves apple via getEduTemplate with svgMarkup', () => {
     const ids = listEduClipartIds()
-    expect(ids).toContain('clipart:airplane')
-    const tmpl = getEduTemplate('clipart:airplane')
+    expect(ids).toContain('clipart:apple')
+    const tmpl = getEduTemplate('clipart:apple')
     expect(tmpl?.kind).toBe('clipart')
     expect(tmpl?.svgMarkup).toContain('<svg')
   })

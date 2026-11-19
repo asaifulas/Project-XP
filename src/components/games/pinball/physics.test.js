@@ -9,6 +9,7 @@ import {
 } from './balls.js'
 import {
   createInitialBall,
+  flipperSegment,
   plungeBall,
   plungeLaunchVy,
   stepPinball,
@@ -182,5 +183,35 @@ describe('pinball physics', () => {
       }
     }
     expect(ejected).toBe(true)
+  })
+})
+
+describe('flippers', () => {
+  it('both flippers hang down at rest (mirror images)', () => {
+    const layout = createTableLayout()
+    const left = flipperSegment(layout.leftFlipper, 'left', FLIPPER.restAngle)
+    const right = flipperSegment(layout.rightFlipper, 'right', FLIPPER.restAngle)
+    expect(left.by).toBeGreaterThan(left.ay)
+    expect(right.by).toBeGreaterThan(right.ay)
+    expect(right.by - right.ay).toBeCloseTo(left.by - left.ay, 6)
+  })
+
+  it('both flippers kick up when pressed', () => {
+    const layout = createTableLayout()
+    const left = flipperSegment(layout.leftFlipper, 'left', FLIPPER.activeAngle)
+    const right = flipperSegment(layout.rightFlipper, 'right', FLIPPER.activeAngle)
+    expect(left.by).toBeLessThan(left.ay)
+    expect(right.by).toBeLessThan(right.ay)
+  })
+
+  it('a pressed flipper throws a ball harder than an idle one', () => {
+    const layout = createTableLayout()
+    const seg = flipperSegment(layout.leftFlipper, 'left', FLIPPER.restAngle)
+    const tipX = (seg.ax + seg.bx) / 2
+    const tipY = (seg.ay + seg.by) / 2
+    const ball = { ...createInitialBall({ x: tipX, y: tipY - 6, vx: 0, vy: 0 }), inLane: false }
+    const idle = stepPinball(ball, { left: FLIPPER.restAngle, right: FLIPPER.restAngle, leftPressed: false, rightPressed: false }, layout, 1 / 120)
+    const pressed = stepPinball(ball, { left: FLIPPER.restAngle, right: FLIPPER.restAngle, leftPressed: true, rightPressed: false }, layout, 1 / 120)
+    expect(pressed.ball.vy).toBeLessThan(idle.ball.vy)
   })
 })

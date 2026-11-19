@@ -45,6 +45,27 @@ function oval(cx, cy, rx, ry, steps = 48) {
   return pts
 }
 
+/**
+ * Points along an ellipse from angle a0 to a1 (degrees; canvas coords: 0 = right, 90 = bottom, 180 = left, 270 = top).
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} rx
+ * @param {number} ry
+ * @param {number} a0
+ * @param {number} a1
+ * @param {number} [steps]
+ * @returns {Point[]}
+ */
+function arcPath(cx, cy, rx, ry, a0, a1, steps = 24) {
+  /** @type {Point[]} */
+  const pts = []
+  for (let i = 0; i <= steps; i += 1) {
+    const a = ((a0 + ((a1 - a0) * i) / steps) * Math.PI) / 180
+    pts.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry })
+  }
+  return pts
+}
+
 function rectPath(x, y, w, h) {
   return [
     { x, y },
@@ -185,7 +206,10 @@ function upperLetterPaths(ch) {
   const map = {
     A: () => [
       [
+        { x: CX, y: T },
         { x: L + W * 0.08, y: B },
+      ],
+      [
         { x: CX, y: T },
         { x: R - W * 0.08, y: B },
       ],
@@ -194,22 +218,28 @@ function upperLetterPaths(ch) {
         { x: R - W * 0.28, y: CY + H * 0.08 },
       ],
     ],
-    B: () => [
-      [
-        { x: L + W * 0.15, y: T },
-        { x: L + W * 0.15, y: B },
-      ],
-      oval(L + W * 0.42, T + H * 0.22, W * 0.32, H * 0.2).slice(0, 25),
-      oval(L + W * 0.45, T + H * 0.72, W * 0.36, H * 0.24).slice(0, 25),
-    ],
+    B: () => {
+      const xs = L + W * 0.15
+      return [
+        [
+          { x: xs, y: T },
+          { x: xs, y: B },
+        ],
+        arcPath(xs, T + H * 0.25, W * 0.3, H * 0.25, 270, 450, 24),
+        arcPath(xs, T + H * 0.75, W * 0.34, H * 0.25, 270, 450, 24),
+      ]
+    },
     C: () => [oval(CX + W * 0.06, CY, W * 0.38, H * 0.42, 40).slice(8, 33)],
-    D: () => [
-      [
-        { x: L + W * 0.18, y: T },
-        { x: L + W * 0.18, y: B },
-      ],
-      oval(L + W * 0.42, CY, W * 0.36, H * 0.42, 40).slice(0, 21),
-    ],
+    D: () => {
+      const xs = L + W * 0.18
+      return [
+        [
+          { x: xs, y: T },
+          { x: xs, y: B },
+        ],
+        arcPath(xs, CY, W * 0.6, H * 0.5, 270, 450, 32),
+      ]
+    },
     E: () => [
       [
         { x: R - W * 0.15, y: T },
@@ -234,11 +264,9 @@ function upperLetterPaths(ch) {
       ],
     ],
     G: () => [
-      oval(CX + W * 0.04, CY, W * 0.38, H * 0.42, 40).slice(6, 34),
       [
-        { x: CX + W * 0.05, y: CY },
-        { x: R - W * 0.18, y: CY },
-        { x: R - W * 0.18, y: CY + H * 0.28 },
+        ...arcPath(CX, CY, W * 0.38, H * 0.42, 330, 0, 36),
+        { x: CX + W * 0.02, y: CY },
       ],
     ],
     H: () => [
@@ -300,7 +328,10 @@ function upperLetterPaths(ch) {
     ],
     M: () => [
       [
+        { x: L + W * 0.1, y: T },
         { x: L + W * 0.1, y: B },
+      ],
+      [
         { x: L + W * 0.1, y: T },
         { x: CX, y: CY + H * 0.05 },
         { x: R - W * 0.1, y: T },
@@ -309,46 +340,52 @@ function upperLetterPaths(ch) {
     ],
     N: () => [
       [
+        { x: L + W * 0.15, y: T },
         { x: L + W * 0.15, y: B },
+      ],
+      [
         { x: L + W * 0.15, y: T },
         { x: R - W * 0.15, y: B },
         { x: R - W * 0.15, y: T },
       ],
     ],
     O: () => [oval(CX, CY, W * 0.36, H * 0.42)],
-    P: () => [
-      [
-        { x: L + W * 0.2, y: B },
-        { x: L + W * 0.2, y: T },
-      ],
-      oval(L + W * 0.42, T + H * 0.24, W * 0.3, H * 0.22).slice(0, 25),
-    ],
+    P: () => {
+      const xs = L + W * 0.2
+      return [
+        [
+          { x: xs, y: T },
+          { x: xs, y: B },
+        ],
+        arcPath(xs, T + H * 0.25, W * 0.32, H * 0.25, 270, 450, 24),
+      ]
+    },
     Q: () => [
       oval(CX, CY - H * 0.02, W * 0.36, H * 0.4),
       [
-        { x: CX + W * 0.08, y: CY + H * 0.18 },
-        { x: R - W * 0.12, y: B },
+        { x: CX + W * 0.18, y: CY + H * 0.33 },
+        { x: R - W * 0.02, y: B + H * 0.02 },
       ],
     ],
-    R: () => [
-      [
-        { x: L + W * 0.2, y: B },
-        { x: L + W * 0.2, y: T },
-      ],
-      oval(L + W * 0.42, T + H * 0.24, W * 0.3, H * 0.22).slice(0, 25),
-      [
-        { x: L + W * 0.38, y: CY },
-        { x: R - W * 0.12, y: B },
-      ],
-    ],
-    S: () => [
-      [
-        { x: R - W * 0.2, y: T + H * 0.12 },
-        ...oval(CX, T + H * 0.22, W * 0.32, H * 0.16, 20).slice(10, 20),
-        ...oval(CX, B - H * 0.22, W * 0.34, H * 0.18, 20).slice(0, 12),
-        { x: L + W * 0.2, y: B - H * 0.1 },
-      ],
-    ],
+    R: () => {
+      const xs = L + W * 0.2
+      return [
+        [
+          { x: xs, y: T },
+          { x: xs, y: B },
+        ],
+        arcPath(xs, T + H * 0.25, W * 0.3, H * 0.25, 270, 450, 24),
+        [
+          { x: xs, y: T + H * 0.5 },
+          { x: R - W * 0.08, y: B },
+        ],
+      ]
+    },
+    S: () => {
+      const top = arcPath(CX, T + H * 0.25, W * 0.34, H * 0.25, 340, 90, 24)
+      const bottom = arcPath(CX, B - H * 0.25, W * 0.36, H * 0.25, 270, 520, 28)
+      return [[...top, ...bottom.slice(1)]]
+    },
     T: () => [
       [
         { x: L + W * 0.12, y: T },
@@ -359,15 +396,18 @@ function upperLetterPaths(ch) {
         { x: CX, y: B },
       ],
     ],
-    U: () => [
-      [
-        { x: L + W * 0.18, y: T },
-        { x: L + W * 0.18, y: B - H * 0.25 },
-        ...oval(CX, B - H * 0.25, W * 0.32, H * 0.22, 20).slice(0, 11),
-        { x: R - W * 0.18, y: B - H * 0.25 },
-        { x: R - W * 0.18, y: T },
-      ],
-    ],
+    U: () => {
+      const xl = L + W * 0.18
+      const xr = R - W * 0.18
+      const cy = B - H * 0.25
+      return [
+        [
+          { x: xl, y: T },
+          ...arcPath((xl + xr) / 2, cy, (xr - xl) / 2, H * 0.25, 180, 0, 24),
+          { x: xr, y: T },
+        ],
+      ]
+    },
     V: () => [
       [
         { x: L + W * 0.1, y: T },
@@ -435,57 +475,80 @@ function lowerLetterPaths(ch) {
   const W = R - L
   const H = B - T
   const xHeight = T + H * 0.35
+  // Writing lines: bowls sit between x-height and baseline; g/p/q descend below it.
+  const base = B
+  const xBand = base - xHeight
+  const bowlRy = xBand / 2
+  const bowlRx = bowlRy * 0.92
+  const bowlCy = xHeight + bowlRy
+  const desc = base + xBand * 0.55
 
   /** @type {Record<string, () => Point[][]>} */
   const map = {
-    a: () => [
-      oval(CX, CY + H * 0.05, W * 0.28, H * 0.28),
-      [
-        { x: R - W * 0.15, y: xHeight },
-        { x: R - W * 0.15, y: B },
-      ],
-    ],
-    b: () => [
-      [
-        { x: L + W * 0.2, y: T },
-        { x: L + W * 0.2, y: B },
-      ],
-      oval(CX + W * 0.05, CY + H * 0.08, W * 0.28, H * 0.28),
-    ],
+    a: () => {
+      const sx = CX + bowlRx
+      return [
+        arcPath(CX, bowlCy, bowlRx, bowlRy, 330, -30, 40),
+        [
+          { x: sx, y: xHeight },
+          { x: sx, y: base },
+        ],
+      ]
+    },
+    b: () => {
+      const sx = CX - bowlRx
+      return [
+        [
+          { x: sx, y: T },
+          { x: sx, y: base },
+        ],
+        arcPath(CX, bowlCy, bowlRx, bowlRy, 180, 540, 40),
+      ]
+    },
     c: () => [oval(CX + W * 0.04, CY + H * 0.05, W * 0.28, H * 0.28, 36).slice(6, 30)],
-    d: () => [
-      [
-        { x: R - W * 0.2, y: T },
-        { x: R - W * 0.2, y: B },
-      ],
-      oval(CX - W * 0.05, CY + H * 0.08, W * 0.28, H * 0.28),
-    ],
-    e: () => [
-      [
-        { x: L + W * 0.18, y: CY + H * 0.02 },
-        { x: R - W * 0.18, y: CY + H * 0.02 },
-      ],
-      oval(CX, CY + H * 0.05, W * 0.3, H * 0.28, 36).slice(4, 32),
-    ],
-    f: () => [
-      oval(CX + W * 0.1, T + H * 0.18, W * 0.18, H * 0.14, 20).slice(10, 20),
-      [
-        { x: CX, y: T + H * 0.18 },
-        { x: CX, y: B },
-      ],
-      [
-        { x: L + W * 0.25, y: CY },
-        { x: R - W * 0.2, y: CY },
-      ],
-    ],
-    g: () => [
-      oval(CX, CY, W * 0.28, H * 0.26),
-      [
-        { x: R - W * 0.18, y: CY - H * 0.15 },
-        { x: R - W * 0.18, y: B - H * 0.05 },
-      ],
-      oval(CX, B - H * 0.08, W * 0.26, H * 0.14, 20).slice(0, 12),
-    ],
+    d: () => {
+      const sx = CX + bowlRx
+      return [
+        arcPath(CX, bowlCy, bowlRx, bowlRy, 330, -30, 40),
+        [
+          { x: sx, y: T },
+          { x: sx, y: base },
+        ],
+      ]
+    },
+    e: () => {
+      const cy = CY + H * 0.05
+      return [
+        [
+          { x: CX - W * 0.3, y: cy },
+          { x: CX + W * 0.3, y: cy },
+        ],
+        arcPath(CX, cy, W * 0.3, H * 0.28, 0, -330, 36),
+      ]
+    },
+    f: () => {
+      const hx = CX + W * 0.16
+      const hy = T + H * 0.2
+      return [
+        [...arcPath(hx, hy, W * 0.16, H * 0.14, 330, 180, 20), { x: CX, y: B }],
+        [
+          { x: L + W * 0.25, y: CY },
+          { x: R - W * 0.2, y: CY },
+        ],
+      ]
+    },
+    g: () => {
+      const sx = CX + bowlRx
+      const tailRy = (desc - base) * 0.75
+      const tailRx = bowlRx * 0.95
+      return [
+        arcPath(CX, bowlCy, bowlRx, bowlRy, 330, -30, 40),
+        [
+          { x: sx, y: xHeight },
+          ...arcPath(sx - tailRx, desc - tailRy, tailRx, tailRy, 0, 160, 24),
+        ],
+      ]
+    },
     h: () => [
       [
         { x: L + W * 0.22, y: T },
@@ -504,14 +567,14 @@ function lowerLetterPaths(ch) {
       ],
       [{ x: CX, y: T + H * 0.08 }],
     ],
-    j: () => [
-      [
-        { x: CX + W * 0.05, y: xHeight },
-        { x: CX + W * 0.05, y: B - H * 0.1 },
-      ],
-      oval(CX - W * 0.05, B - H * 0.08, W * 0.16, H * 0.1, 16).slice(0, 9),
-      [{ x: CX + W * 0.05, y: T + H * 0.08 }],
-    ],
+    j: () => {
+      const xs = CX + W * 0.05
+      const hy = B - H * 0.12
+      return [
+        [{ x: xs, y: xHeight }, ...arcPath(xs - W * 0.12, hy, W * 0.12, H * 0.12, 0, 160, 20)],
+        [{ x: xs, y: T + H * 0.08 }],
+      ]
+    },
     k: () => [
       [
         { x: L + W * 0.22, y: T },
@@ -529,59 +592,73 @@ function lowerLetterPaths(ch) {
         { x: CX, y: B },
       ],
     ],
-    m: () => [
-      [
-        { x: L + W * 0.12, y: B },
-        { x: L + W * 0.12, y: xHeight },
-        { x: L + W * 0.35, y: CY },
-        { x: CX, y: xHeight },
-        { x: CX, y: B },
-      ],
-      [
-        { x: CX, y: xHeight },
-        { x: R - W * 0.35, y: CY },
-        { x: R - W * 0.12, y: xHeight },
-        { x: R - W * 0.12, y: B },
-      ],
-    ],
-    n: () => [
-      [
-        { x: L + W * 0.2, y: B },
-        { x: L + W * 0.2, y: xHeight },
-        ...oval(CX + W * 0.05, CY + H * 0.05, W * 0.26, H * 0.22, 18).slice(12, 18),
-        { x: R - W * 0.18, y: B },
-      ],
-    ],
+    m: () => {
+      const xa = L + W * 0.12
+      const xb = CX
+      const xc = R - W * 0.12
+      const ry = (B - xHeight) * 0.3
+      const cy = xHeight + ry
+      return [
+        [
+          { x: xa, y: xHeight },
+          { x: xa, y: B },
+        ],
+        [...arcPath((xa + xb) / 2, cy, (xb - xa) / 2, ry, 180, 360, 16), { x: xb, y: B }],
+        [...arcPath((xb + xc) / 2, cy, (xc - xb) / 2, ry, 180, 360, 16), { x: xc, y: B }],
+      ]
+    },
+    n: () => {
+      const xl = L + W * 0.2
+      const xr = R - W * 0.18
+      const ry = (B - xHeight) * 0.3
+      const cy = xHeight + ry
+      return [
+        [
+          { x: xl, y: xHeight },
+          { x: xl, y: B },
+        ],
+        [...arcPath((xl + xr) / 2, cy, (xr - xl) / 2, ry, 180, 360, 18), { x: xr, y: B }],
+      ]
+    },
     o: () => [oval(CX, CY + H * 0.05, W * 0.3, H * 0.28)],
-    p: () => [
-      [
-        { x: L + W * 0.2, y: xHeight },
-        { x: L + W * 0.2, y: B + H * 0.05 },
-      ],
-      oval(CX + W * 0.05, CY + H * 0.05, W * 0.28, H * 0.26),
-    ],
-    q: () => [
-      [
-        { x: R - W * 0.2, y: xHeight },
-        { x: R - W * 0.2, y: B + H * 0.05 },
-      ],
-      oval(CX - W * 0.05, CY + H * 0.05, W * 0.28, H * 0.26),
-    ],
-    r: () => [
-      [
-        { x: L + W * 0.25, y: B },
-        { x: L + W * 0.25, y: xHeight },
-      ],
-      oval(CX + W * 0.1, CY, W * 0.22, H * 0.18, 18).slice(12, 18),
-    ],
-    s: () => [
-      [
-        { x: R - W * 0.22, y: xHeight + H * 0.05 },
-        ...oval(CX, CY - H * 0.05, W * 0.24, H * 0.12, 16).slice(8, 16),
-        ...oval(CX, CY + H * 0.18, W * 0.24, H * 0.12, 16).slice(0, 10),
-        { x: L + W * 0.22, y: B - H * 0.05 },
-      ],
-    ],
+    p: () => {
+      const sx = CX - bowlRx
+      return [
+        [
+          { x: sx, y: xHeight },
+          { x: sx, y: desc },
+        ],
+        arcPath(CX, bowlCy, bowlRx, bowlRy, 180, 540, 40),
+      ]
+    },
+    q: () => {
+      const sx = CX + bowlRx
+      return [
+        arcPath(CX, bowlCy, bowlRx, bowlRy, 330, -30, 40),
+        [
+          { x: sx, y: xHeight },
+          { x: sx, y: desc },
+        ],
+      ]
+    },
+    r: () => {
+      const sx = L + W * 0.25
+      const ry = (B - xHeight) * 0.3
+      const cy = xHeight + ry
+      return [
+        [
+          { x: sx, y: B },
+          { x: sx, y: cy },
+        ],
+        arcPath(sx + W * 0.2, cy, W * 0.2, ry, 180, 290, 16),
+      ]
+    },
+    s: () => {
+      const ry = (B - xHeight) * 0.25
+      const top = arcPath(CX, xHeight + ry, W * 0.2, ry, 330, 90, 16)
+      const bottom = arcPath(CX, B - ry, W * 0.22, ry, 270, 520, 16)
+      return [[...top, ...bottom.slice(1)]]
+    },
     t: () => [
       [
         { x: CX, y: T + H * 0.1 },
@@ -592,15 +669,19 @@ function lowerLetterPaths(ch) {
         { x: R - W * 0.2, y: xHeight },
       ],
     ],
-    u: () => [
-      [
-        { x: L + W * 0.2, y: xHeight },
-        { x: L + W * 0.2, y: B - H * 0.12 },
-        ...oval(CX, B - H * 0.12, W * 0.26, H * 0.16, 16).slice(0, 9),
-        { x: R - W * 0.2, y: B - H * 0.12 },
-        { x: R - W * 0.2, y: B },
-      ],
-    ],
+    u: () => {
+      const xl = L + W * 0.2
+      const xr = R - W * 0.2
+      const ry = (B - xHeight) * 0.3
+      const cy = B - ry
+      return [
+        [
+          { x: xl, y: xHeight },
+          ...arcPath((xl + xr) / 2, cy, (xr - xl) / 2, ry, 180, 0, 16),
+          { x: xr, y: xHeight },
+        ],
+      ]
+    },
     v: () => [
       [
         { x: L + W * 0.15, y: xHeight },
@@ -686,10 +767,11 @@ function digitPaths(digit) {
         { x: R - W * 0.15, y: B },
       ],
     ],
-    '3': () => [
-      oval(CX - W * 0.02, T + H * 0.22, W * 0.3, H * 0.18, 20).slice(8, 20),
-      oval(CX, B - H * 0.24, W * 0.34, H * 0.22, 22).slice(0, 14),
-    ],
+    '3': () => {
+      const top = arcPath(CX, T + H * 0.25, W * 0.3, H * 0.25, 200, 450, 28)
+      const bottom = arcPath(CX, B - H * 0.25, W * 0.34, H * 0.25, 270, 520, 28)
+      return [[...top, ...bottom.slice(1)]]
+    },
     '4': () => [
       [
         { x: R - W * 0.28, y: T },
@@ -710,13 +792,11 @@ function digitPaths(digit) {
       ],
       oval(CX, B - H * 0.24, W * 0.32, H * 0.22, 22).slice(0, 16),
     ],
-    '6': () => [
-      [
-        { x: R - W * 0.2, y: T + H * 0.15 },
-        ...oval(CX, CY + H * 0.08, W * 0.34, H * 0.36, 36).slice(8, 36),
-      ],
-      oval(CX, CY + H * 0.18, W * 0.24, H * 0.2),
-    ],
+    '6': () => {
+      const big = arcPath(CX, T + H * 0.5, W * 0.34, H * 0.5, 330, 90, 40)
+      const loop = arcPath(CX, B - H * 0.22, W * 0.3, H * 0.22, 90, 450, 36)
+      return [big, loop]
+    },
     '7': () => [
       [
         { x: L + W * 0.15, y: T },
@@ -792,8 +872,9 @@ export function getEduTemplate(id) {
       label: getClipartLabel(slug),
       kind: 'clipart',
       closed: false,
-      // Coarser resample — clipart is a picture guide; paths are for magnetic only.
-      paths: prepareTemplatePaths(strokes, { spacing: 14 }),
+      // Magnetic snap is off for clipart: auto-traced strokes wandered off the picture.
+      // The picture itself stays a free-hand guide.
+      paths: [],
       svgMarkup,
       guideImage: null,
     }
