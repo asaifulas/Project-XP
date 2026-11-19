@@ -111,7 +111,7 @@ export const PLAYGROUND_READMES = {
     ],
     howItWorks: [
       'Edu → pick Line/Type/Magnetic strength, then a letter, digit, shape, or Clipart category → canvas becomes A4 with a guide.',
-      'Clipart uses CC0 Openclipart SVG outlines (not XP Clip Gallery — that pack is proprietary). Jawi is disabled in the menu until huruf tracing is ready.',
+      'Clipart uses CC0 Openclipart SVG outlines (not XP Clip Gallery — that pack is proprietary).',
       'Magnetic projects each pointer sample onto the nearest guide stroke within a snap radius.',
       'Changing guide Type refreshes a clean A4 page (ink reset) so the new style stays readable.',
       'Free Drawing templates remain stubbed for a later pack.',

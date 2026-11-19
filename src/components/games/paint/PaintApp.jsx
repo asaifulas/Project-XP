@@ -15,6 +15,7 @@ import {
   drawEduTemplate,
   getEduTemplate,
 } from './eduTemplates.js'
+import { eduJawiMenuItems } from './eduJawi.js'
 import {
   CANVAS_H,
   CANVAS_SCROLL_PAD,
@@ -1283,8 +1284,11 @@ export default function PaintApp({ keyboardActive = true }) {
         },
         {
           label: 'Jawi',
-          disabled: true,
-          submenu: [{ label: 'Coming soon', disabled: true }],
+          submenu: eduJawiMenuItems().map((item) => ({
+            label: item.label,
+            checked: eduTemplateId === item.id,
+            action: () => applyEduTemplate(item.id),
+          })),
         },
         {
           label: 'Shape',
