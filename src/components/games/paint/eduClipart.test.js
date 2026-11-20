@@ -101,11 +101,14 @@ describe('eduJawi (ABC-style single strokes)', () => {
     expect(ids).toContain('jawi:ب')
   })
 
-  it('Alif is one vertical stroke like letter I', () => {
+  it('Alif is one near-vertical stroke like letter I', () => {
     const alif = getJawiLetter('ا')
     expect(alif?.name).toBe('Alif')
     expect(alif?.paths.length).toBe(1)
-    expect(alif?.paths[0].length).toBe(2)
+    const pts = alif.paths[0]
+    const dx = Math.abs(pts[pts.length - 1].x - pts[0].x)
+    const dy = Math.abs(pts[pts.length - 1].y - pts[0].y)
+    expect(dy).toBeGreaterThan(dx * 4)
   })
 
   it('Ba is bowl + one nuqṭah (open strokes, not font outline)', () => {

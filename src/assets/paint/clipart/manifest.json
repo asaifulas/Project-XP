@@ -1,6 +1,6 @@
 {
   "license": "CC0-1.0 / Public Domain via Openclipart.org",
-  "note": "Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art.",
+  "note": "Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art. Ten original line drawings (moon, star, KLCC, village house, Proton Saga, Kancil, Honda C50, grass, stone, bridge) are marked local and were drawn for this pack.",
   "source": "https://openclipart.org",
   "items": [
     {
@@ -233,6 +233,66 @@
       "label": "Book",
       "oclId": 355258,
       "slug": "white-open-book-being-read"
+    },
+    {
+      "id": "moon",
+      "category": "nature",
+      "label": "Moon",
+      "local": true
+    },
+    {
+      "id": "star",
+      "category": "nature",
+      "label": "Star",
+      "local": true
+    },
+    {
+      "id": "klcc",
+      "category": "buildings",
+      "label": "KLCC towers",
+      "local": true
+    },
+    {
+      "id": "village-house",
+      "category": "buildings",
+      "label": "Village house",
+      "local": true
+    },
+    {
+      "id": "saga",
+      "category": "transportation",
+      "label": "Old Proton Saga",
+      "local": true
+    },
+    {
+      "id": "grass",
+      "category": "plants",
+      "label": "Grass",
+      "local": true
+    },
+    {
+      "id": "stone",
+      "category": "nature",
+      "label": "Stone",
+      "local": true
+    },
+    {
+      "id": "bridge",
+      "category": "buildings",
+      "label": "Bridge",
+      "local": true
+    },
+    {
+      "id": "kancil",
+      "category": "transportation",
+      "label": "Old Kancil",
+      "local": true
+    },
+    {
+      "id": "c50",
+      "category": "transportation",
+      "label": "Honda C50 cub",
+      "local": true
     }
   ],
   "failed": []

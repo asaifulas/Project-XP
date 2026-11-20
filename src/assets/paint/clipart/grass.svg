@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" fill="#fff">
+<path d="M20 180 H180" stroke-width="3"/>
+<path d="M30 180 Q28 150 20 128 M36 180 Q36 146 40 118 M42 180 Q46 156 56 140"/>
+<path d="M70 180 Q68 146 60 120 M78 180 Q80 150 90 124 M84 180 Q78 160 72 146"/>
+<path d="M110 180 Q108 148 100 122 M118 180 Q120 152 130 130 M124 180 Q118 160 112 146"/>
+<path d="M150 180 Q148 150 140 126 M158 180 Q160 146 170 120 M166 180 Q160 158 152 144"/>
+</svg>

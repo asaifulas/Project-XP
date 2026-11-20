@@ -3,6 +3,17 @@ import usePhoneGameLayout from '../_shared/usePhoneGameLayout'
 import { cursorForTool } from './cursors.js'
 import PaintCascadingMenu from './PaintCascadingMenu.jsx'
 import { magneticSnapToPaths } from './eduMagnetic.js'
+import {
+  fitStickerSize,
+  hitTestSticker,
+  knockoutWhite,
+  rotationToward,
+  scaleToward,
+  hexToRgb,
+  stickerHandles,
+  tintInk,
+  viewBoxAspect,
+} from './stickers.js'
 import { EDU_CLIPART_CATEGORIES, loadSvgImage } from './eduClipart.js'
 import {
   EDU_A4_H,
@@ -59,6 +70,43 @@ function preferTouchDrawing() {
     window.matchMedia('(pointer: coarse)').matches
   )
 }
+
+/**
+ * Clipart ink in the palette colour, or a 32px cursor thumbnail of it.
+ * @param {ImageData} mask
+ * @param {string} color
+ */
+function colorInk(mask, color) {
+  const canvas = document.createElement('canvas')
+  canvas.width = mask.width
+  canvas.height = mask.height
+  const data = new Uint8ClampedArray(mask.data)
+  tintInk(data, hexToRgb(color))
+  canvas.getContext('2d')?.putImageData(new ImageData(data, mask.width, mask.height), 0, 0)
+  return canvas
+}
+
+const ROTATE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12a7 7 0 1 1-2.05-4.95" stroke="white" stroke-width="5"/><path d="M19 4v5h-5" stroke="white" stroke-width="5"/><path d="M19 12a7 7 0 1 1-2.05-4.95" stroke="black" stroke-width="2"/><path d="M19 4v5h-5" stroke="black" stroke-width="2"/></g></svg>',
+)}") 12 12, alias`
+
+const STICKER_HOVER_CURSOR = { move: 'move', resize: 'nwse-resize', rotate: ROTATE_CURSOR }
+
+function stickerCursorFor(ink) {
+  const size = 32
+  const thumb = document.createElement('canvas')
+  thumb.width = size
+  thumb.height = size
+  const tctx = thumb.getContext('2d')
+  const scale = Math.min(size / ink.width, size / ink.height)
+  tctx?.drawImage(ink, (size - ink.width * scale) / 2, (size - ink.height * scale) / 2, ink.width * scale, ink.height * scale)
+  return `url(${thumb.toDataURL('image/png')}) 16 16, copy`
+}
+
+/**
+ * @typedef {{ mask: ImageData, ink: HTMLCanvasElement, cx: number, cy: number, w: number, h: number, rot: number }} StickerState
+ * @typedef {{ mode: 'move' | 'resize' | 'rotate', start: { x: number, y: number }, base: StickerState, pointerId: number }} StickerDrag
+ */
 
 export default function PaintApp({ keyboardActive = true }) {
   const isPhone = usePhoneGameLayout()
@@ -213,8 +261,129 @@ export default function PaintApp({ keyboardActive = true }) {
     [],
   )
 
+  const clearOverlay = useCallback(() => {
+    const overlay = overlayRef.current
+    if (!overlay) return
+    const octx = overlay.getContext('2d')
+    if (!octx) return
+    octx.clearRect(0, 0, overlay.width, overlay.height)
+  }, [])
+
+  const stickerRef = useRef(/** @type {StickerState | null} */ (null))
+  const stickerDragRef = useRef(/** @type {StickerDrag | null} */ (null))
+  const [stickerCursor, setStickerCursor] = useState(/** @type {string | null} */ (null))
+  const [stickerHover, setStickerHover] = useState(/** @type {string | null} */ (null))
+
+  const screenScale = useCallback(() => {
+    const canvas = canvasRef.current
+    const rect = canvas?.getBoundingClientRect()
+    return canvas && rect?.width ? canvas.width / rect.width : 1
+  }, [])
+
+  const drawStickerOverlay = useCallback(() => {
+    clearOverlay()
+    const sticker = stickerRef.current
+    const octx = overlayRef.current?.getContext('2d')
+    if (!sticker || !octx) return
+    const scale = screenScale()
+    const accent = '#1f6fd1'
+    octx.save()
+    octx.translate(sticker.cx, sticker.cy)
+    octx.rotate(sticker.rot)
+    octx.drawImage(sticker.ink, -sticker.w / 2, -sticker.h / 2, sticker.w, sticker.h)
+    octx.setLineDash([6 * scale, 4 * scale])
+    octx.lineWidth = 1.5 * scale
+    octx.strokeStyle = accent
+    octx.strokeRect(-sticker.w / 2, -sticker.h / 2, sticker.w, sticker.h)
+    octx.restore()
+    const handles = stickerHandles(sticker, scale)
+    octx.setLineDash([])
+    octx.fillStyle = '#ffffff'
+    octx.strokeStyle = accent
+    octx.lineWidth = 1.5 * scale
+    for (const h of [handles.corner, handles.rotate]) {
+      octx.beginPath()
+      octx.arc(h.x, h.y, 7 * scale, 0, Math.PI * 2)
+      octx.fill()
+      octx.stroke()
+    }
+  }, [clearOverlay, screenScale])
+
+  const discardSticker = useCallback(() => {
+    stickerRef.current = null
+    stickerDragRef.current = null
+    setStickerCursor(null)
+    setStickerHover(null)
+    clearOverlay()
+  }, [clearOverlay])
+
+  useEffect(() => {
+    const sticker = stickerRef.current
+    if (!sticker) return
+    sticker.ink = colorInk(sticker.mask, fg)
+    setStickerCursor(stickerCursorFor(sticker.ink))
+    drawStickerOverlay()
+  }, [drawStickerOverlay, fg])
+
+  const commitSticker = useCallback(() => {
+    const sticker = stickerRef.current
+    const ctx = getCtx()
+    if (!sticker || !ctx) return
+    pushUndo()
+    ctx.save()
+    ctx.translate(sticker.cx, sticker.cy)
+    ctx.rotate(sticker.rot)
+    ctx.drawImage(sticker.ink, -sticker.w / 2, -sticker.h / 2, sticker.w, sticker.h)
+    ctx.restore()
+    discardSticker()
+    setStatus('Clipart placed')
+  }, [discardSticker, getCtx, pushUndo, setStatus])
+
+  useEffect(() => {
+    commitSticker()
+  }, [tool, commitSticker])
+
+  const addSticker = useCallback(
+    (templateId) => {
+      const template = getEduTemplate(templateId)
+      const canvas = canvasRef.current
+      if (!template?.svgMarkup || !canvas) {
+        setStatus('Clipart not found')
+        return
+      }
+      commitSticker()
+      setStatus(`Clipart · ${template.label} · drag to place, then click outside to keep`)
+      loadSvgImage(template.svgMarkup)
+        .then((img) => {
+          const page = canvasRef.current
+          if (!page) return
+          const aspect = viewBoxAspect(template.svgMarkup) ?? (img.naturalWidth / img.naturalHeight || 1)
+          const ink = document.createElement('canvas')
+          const long = 640
+          ink.width = aspect >= 1 ? long : Math.round(long * aspect)
+          ink.height = aspect >= 1 ? Math.round(long / aspect) : long
+          const ictx = ink.getContext('2d', { willReadFrequently: true })
+          if (!ictx) return
+          ictx.drawImage(img, 0, 0, ink.width, ink.height)
+          const pixels = ictx.getImageData(0, 0, ink.width, ink.height)
+          knockoutWhite(pixels.data)
+          ictx.putImageData(pixels, 0, 0)
+          const { w, h } = fitStickerSize(aspect, page.width, page.height)
+          const mask = new ImageData(new Uint8ClampedArray(pixels.data), ink.width, ink.height)
+          commitSticker()
+          const colored = colorInk(mask, fg)
+          stickerRef.current = { mask, ink: colored, cx: page.width / 2, cy: page.height / 2, w, h, rot: 0 }
+          setStickerCursor(stickerCursorFor(colored))
+          drawStickerOverlay()
+        })
+        .catch(() => setStatus('Clipart failed to load'))
+    },
+    [commitSticker, drawStickerOverlay, fg],
+  )
+
   const clearCanvas = useCallback(
     (pushHistory = true) => {
+      discardSticker()
       const canvas = canvasRef.current
       const ctx = getCtx()
       if (!canvas || !ctx) return
@@ -225,7 +394,7 @@ export default function PaintApp({ keyboardActive = true }) {
       if (tmpl) paintEduGuide(ctx, tmpl, eduLineType, eduGuideSize)
       setStatus(tmpl ? `Edu · ${tmpl.label}` : 'New image')
     },
-    [bg, eduGuideSize, eduLineType, getCtx, paintEduGuide, pushUndo],
+    [bg, discardSticker, eduGuideSize, eduLineType, getCtx, paintEduGuide, pushUndo],
   )
 
   const applyEduTemplate = useCallback(
@@ -237,6 +406,7 @@ export default function PaintApp({ keyboardActive = true }) {
       }
       const canvas = canvasRef.current
       if (!canvas) return
+      commitSticker()
       pushUndo()
 
       const finishApply = (ready) => {
@@ -280,6 +450,7 @@ export default function PaintApp({ keyboardActive = true }) {
       finishApply({ ...template, guideImage: null })
     },
     [
+      commitSticker,
       eduLineMode,
       eduLineType,
       eduMagneticLevel,
@@ -289,6 +460,19 @@ export default function PaintApp({ keyboardActive = true }) {
       useMobileLayout,
     ],
   )
+
+  const clearEduInk = useCallback(() => {
+    discardSticker()
+    const template = eduTemplateRef.current
+    const canvas = canvasRef.current
+    const ctx = getCtx()
+    if (!template || !canvas || !ctx) return
+    pushUndo()
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    paintEduGuide(ctx, template, eduLineType, eduGuideSize)
+    setStatus(`Edu · ${template.label} · cleared`)
+  }, [discardSticker, eduGuideSize, eduLineType, getCtx, paintEduGuide, pushUndo])
 
   const exitEdu = useCallback(() => {
     eduTemplateRef.current = null
@@ -364,13 +548,6 @@ export default function PaintApp({ keyboardActive = true }) {
     return { x, y }
   }, [])
 
-  const clearOverlay = useCallback(() => {
-    const overlay = overlayRef.current
-    if (!overlay) return
-    const octx = overlay.getContext('2d')
-    if (!octx) return
-    octx.clearRect(0, 0, overlay.width, overlay.height)
-  }, [])
 
   const widthForDrawTool = useCallback(
     (drawTool) => {
@@ -534,6 +711,7 @@ export default function PaintApp({ keyboardActive = true }) {
   )
 
   const doUndo = useCallback(() => {
+    commitSticker()
     const canvas = canvasRef.current
     const ctx = getCtx()
     if (!canvas || !ctx || undoRef.current.length === 0) {
@@ -554,7 +732,7 @@ export default function PaintApp({ keyboardActive = true }) {
     ctx.putImageData(snap, 0, 0)
     setCanUndo(undoRef.current.length > 0)
     setStatus('Undo')
-  }, [getCtx, syncOverlaySize])
+  }, [commitSticker, getCtx, syncOverlaySize])
 
   const doSave = useCallback(async () => {
     const canvas = canvasRef.current
@@ -782,6 +960,20 @@ export default function PaintApp({ keyboardActive = true }) {
         }
       }
 
+      if (stickerRef.current) {
+        const sticker = stickerRef.current
+        const point = canvasPoint(event)
+        const mode = hitTestSticker(sticker, point, canvas.width / (canvas.getBoundingClientRect().width || 1))
+        if (!mode) {
+          commitSticker()
+          return
+        }
+        event.preventDefault()
+        stickerDragRef.current = { mode, start: point, base: { ...sticker }, pointerId: event.pointerId }
+        canvas.setPointerCapture?.(event.pointerId)
+        return
+      }
+
       const isTouchLike =
         event.pointerType === 'touch' ||
         event.pointerType === 'pen' ||
@@ -919,6 +1111,7 @@ export default function PaintApp({ keyboardActive = true }) {
     [
       applyZoom,
       canvasPoint,
+      commitSticker,
       commitTextEdit,
       fg,
       getCtx,
@@ -936,6 +1129,30 @@ export default function PaintApp({ keyboardActive = true }) {
 
   const onPointerMove = useCallback(
     (event) => {
+      const drag = stickerDragRef.current
+      const sticker = stickerRef.current
+      if (drag && sticker && event.pointerId === drag.pointerId) {
+        const point = canvasPoint(event)
+        if (drag.mode === 'move') {
+          sticker.cx = drag.base.cx + (point.x - drag.start.x)
+          sticker.cy = drag.base.cy + (point.y - drag.start.y)
+        } else if (drag.mode === 'rotate') {
+          sticker.rot = rotationToward(sticker, point)
+        } else {
+          const k = scaleToward(drag.base, point)
+          sticker.w = drag.base.w * k
+          sticker.h = drag.base.h * k
+        }
+        setStickerHover(STICKER_HOVER_CURSOR[drag.mode])
+        drawStickerOverlay()
+        return
+      }
+      if (sticker) {
+        const canvasEl = canvasRef.current
+        const scale = canvasEl ? canvasEl.width / (canvasEl.getBoundingClientRect().width || 1) : 1
+        const mode = hitTestSticker(sticker, canvasPoint(event), scale)
+        setStickerHover(mode ? STICKER_HOVER_CURSOR[mode] : null)
+      }
       if (event.pointerType === 'touch' && touchPointsRef.current.has(event.pointerId)) {
         touchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
         if (touchPointsRef.current.size >= 2) {
@@ -994,6 +1211,7 @@ export default function PaintApp({ keyboardActive = true }) {
     [
       canvasPoint,
       drawShape,
+      drawStickerOverlay,
       getCtx,
       snapEduPoint,
       strokeLine,
@@ -1042,6 +1260,10 @@ export default function PaintApp({ keyboardActive = true }) {
 
   const onPointerUp = useCallback(
     (event) => {
+      if (stickerDragRef.current) {
+        stickerDragRef.current = null
+        return
+      }
       endStroke(event)
     },
     [endStroke],
@@ -1309,8 +1531,7 @@ export default function PaintApp({ keyboardActive = true }) {
               const id = `clipart:${item.id}`
               return {
                 label: item.label,
-                checked: eduTemplateId === id,
-                action: () => applyEduTemplate(id),
+                action: () => addSticker(id),
               }
             }),
           })),
@@ -1319,6 +1540,12 @@ export default function PaintApp({ keyboardActive = true }) {
           label: 'Drawing',
           disabled: true,
           submenu: [{ label: 'Coming soon', disabled: true }],
+        },
+        { separator: true },
+        {
+          label: 'Clear',
+          action: clearEduInk,
+          disabled: !eduTemplateId,
         },
         {
           label: 'Exit Edu',
@@ -1372,7 +1599,7 @@ export default function PaintApp({ keyboardActive = true }) {
           ? 'brush'
           : null
   const brushDiameterCss = stampTool ? widthForDrawTool(stampTool) * zoom : 0
-  const canvasCursor =
+  const toolCursor =
     tool === 'hand'
       ? panRef.current
         ? 'grabbing'
@@ -1385,6 +1612,7 @@ export default function PaintApp({ keyboardActive = true }) {
               erase: stampTool === 'eraser',
             })
           : cursorForTool(tool)
+  const canvasCursor = stickerHover ?? stickerCursor ?? toolCursor
   const toolBtnClass = useMobileLayout
     ? 'flex h-8 w-8 shrink-0 items-center justify-center border text-[13px] leading-none'
     : 'flex h-[26px] w-[26px] items-center justify-center border text-[12px] leading-none'
@@ -1673,7 +1901,10 @@ export default function PaintApp({ keyboardActive = true }) {
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
-                onPointerLeave={() => setBrushPreview(null)}
+                onPointerLeave={() => {
+                  setBrushPreview(null)
+                  setStickerHover(null)
+                }}
                 onPointerCancel={() => {
                   drawingRef.current = false
                   clearOverlay()

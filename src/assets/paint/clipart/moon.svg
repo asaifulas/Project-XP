@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" fill="#fff">
+<defs><mask id="m"><rect width="200" height="200" fill="#fff"/><circle cx="132" cy="84" r="62" fill="#000"/></mask><clipPath id="c"><circle cx="100" cy="100" r="78"/></clipPath></defs>
+<circle cx="100" cy="100" r="78" mask="url(#m)"/>
+<circle cx="132" cy="84" r="62" fill="none" clip-path="url(#c)"/>
+</svg>

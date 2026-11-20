@@ -38,3 +38,15 @@ Files: 33
 - icecream.svg  (openclipart.org/detail/273240/ice-cream-line-art)
 - cloud.svg  (openclipart.org/detail/344407/cloud-banner-with-transparent-background)
 - book.svg  (openclipart.org/detail/355258/white-open-book-being-read)
+
+Original drawings (made for this project, no third-party source):
+  - Moon
+  - Star
+  - KLCC towers
+  - Village house
+  - Old Proton Saga
+  - Grass
+  - Stone
+  - Bridge
+  - Old Kancil
+  - Honda C50 cub

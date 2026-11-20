@@ -105,14 +105,16 @@ export function magneticSnapToPaths(sample, paths, level, opts = {}) {
 
 /**
  * Densify a polyline so dash/dot rendering and snap feel even.
+ * A per-point half-width `w` (Jawi pen strokes) is interpolated along with x/y.
  * @param {Point[]} path
  * @param {number} spacing
  * @param {{ closed?: boolean }} [opts]
  */
 export function resamplePath(path, spacing, opts = {}) {
   if (!path || path.length === 0) return []
-  if (path.length === 1) return [{ x: path[0].x, y: path[0].y }]
-  const out = [{ x: path[0].x, y: path[0].y }]
+  const copy = (p) => (p.w == null ? { x: p.x, y: p.y } : { x: p.x, y: p.y, w: p.w })
+  if (path.length === 1) return [copy(path[0])]
+  const out = [copy(path[0])]
   const closed = Boolean(opts.closed)
   const count = closed ? path.length : path.length - 1
   let carry = 0
@@ -124,7 +126,9 @@ export function resamplePath(path, spacing, opts = {}) {
     let pos = spacing - carry
     while (pos <= segLen) {
       const t = pos / segLen
-      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
+      const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+      if (a.w != null && b.w != null) p.w = a.w + (b.w - a.w) * t
+      out.push(p)
       pos += spacing
     }
     carry = (segLen + carry) % spacing
@@ -132,7 +136,7 @@ export function resamplePath(path, spacing, opts = {}) {
   if (!closed) {
     const last = path[path.length - 1]
     const tip = out[out.length - 1]
-    if (!tip || dist(tip, last) > 0.5) out.push({ x: last.x, y: last.y })
+    if (!tip || dist(tip, last) > 0.5) out.push(copy(last))
   }
   return out
 }

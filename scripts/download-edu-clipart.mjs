@@ -80,10 +80,77 @@ async function downloadOne(entry) {
   return svg
 }
 
+/**
+ * Original line art drawn for this pack (not downloaded). Kept across re-downloads.
+ */
+const LOCAL_ITEMS = [
+  {
+    id: "moon",
+    category: "nature",
+    label: "Moon",
+    local: true
+  },
+  {
+    id: "star",
+    category: "nature",
+    label: "Star",
+    local: true
+  },
+  {
+    id: "klcc",
+    category: "buildings",
+    label: "KLCC towers",
+    local: true
+  },
+  {
+    id: "village-house",
+    category: "buildings",
+    label: "Village house",
+    local: true
+  },
+  {
+    id: "saga",
+    category: "transportation",
+    label: "Old Proton Saga",
+    local: true
+  },
+  {
+    id: "grass",
+    category: "plants",
+    label: "Grass",
+    local: true
+  },
+  {
+    id: "stone",
+    category: "nature",
+    label: "Stone",
+    local: true
+  },
+  {
+    id: "bridge",
+    category: "buildings",
+    label: "Bridge",
+    local: true
+  },
+  {
+    id: "kancil",
+    category: "transportation",
+    label: "Old Kancil",
+    local: true
+  },
+  {
+    id: "c50",
+    category: "transportation",
+    label: "Honda C50 cub",
+    local: true
+  }
+]
+
 async function main() {
   await mkdir(OUT, { recursive: true })
+  const localIds = new Set(LOCAL_ITEMS.map((item) => item.id))
   for (const name of await readdir(OUT)) {
-    if (name.endsWith('.svg')) await unlink(path.join(OUT, name))
+    if (name.endsWith('.svg') && !localIds.has(path.basename(name, '.svg'))) await unlink(path.join(OUT, name))
   }
 
   const ok = []
@@ -107,7 +174,7 @@ async function main() {
         license: 'CC0-1.0 / Public Domain via Openclipart.org',
         note: 'Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art.',
         source: 'https://openclipart.org',
-        items: ok,
+        items: [...ok, ...LOCAL_ITEMS],
         failed: fail,
       },
       null,

@@ -16,7 +16,7 @@ import { resamplePath } from './eduMagnetic.js'
 export const EDU_A4_W = 595
 export const EDU_A4_H = 842
 
-/** @typedef {{ x: number, y: number }} Point */
+/** @typedef {{ x: number, y: number, w?: number }} Point */
 /**
  * @typedef {{
  *   id: string
@@ -24,6 +24,8 @@ export const EDU_A4_H = 842
  *   kind: 'letter' | 'digit' | 'shape' | 'clipart' | 'jawi' | 'drawing'
  *   closed: boolean
  *   paths: Point[][]
+ *   outline?: Point[][]
+ *   nuqtah?: { x: number, y: number, r: number }[]
  *   svgMarkup?: string | null
  *   guideImage?: CanvasImageSource | null
  * }} EduTemplate
@@ -889,7 +891,9 @@ export function getEduTemplate(id) {
       label: `${ch} ${letter.name}`,
       kind: 'jawi',
       closed: false,
-      paths: prepareTemplatePaths(letter.paths),
+      paths: prepareTemplatePaths(letter.paths, { spacing: 3 }),
+      outline: letter.outline,
+      nuqtah: letter.nuqtah,
     }
   }
 
@@ -1019,6 +1023,12 @@ export function drawEduTemplate(ctx, template, lineType, guideSize = 'm') {
     return
   }
 
+  if (template.outline) {
+    drawNaskhGuide(ctx, template, lineType, size)
+    ctx.restore()
+    return
+  }
+
   // Soft continuous underlay (fill boundary + visibility)
   ctx.globalAlpha = 0.35
   ctx.lineWidth = size.underlay
@@ -1074,6 +1084,71 @@ export function drawEduTemplate(ctx, template, lineType, guideSize = 'm') {
   }
 
   ctx.restore()
+}
+
+/**
+ * Jawi: soft filled Naskh shape (thick and thin pen strokes, diamond nuqtah), then the
+ * centre-line guide. Dotted dots follow the pen: big where the stroke is thick, small
+ * at the thin ends.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {EduTemplate} template
+ * @param {'dotted' | 'dash' | 'straight'} lineType
+ * @param {(typeof EDU_GUIDE_SIZES)['m']} size
+ */
+function drawNaskhGuide(ctx, template, lineType, size) {
+  const nuqtah = template.nuqtah ?? []
+  ctx.beginPath()
+  for (const loop of template.outline ?? []) {
+    loop.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)))
+    ctx.closePath()
+  }
+  for (const d of nuqtah) {
+    const r = d.r * 1.15
+    ctx.moveTo(d.x, d.y - r)
+    ctx.lineTo(d.x + r, d.y)
+    ctx.lineTo(d.x, d.y + r)
+    ctx.lineTo(d.x - r, d.y)
+    ctx.closePath()
+  }
+  ctx.globalAlpha = 0.24
+  ctx.fill('evenodd')
+  ctx.globalAlpha = 0.45
+  ctx.lineWidth = 1.2
+  ctx.setLineDash([])
+  ctx.stroke()
+
+  ctx.globalAlpha = 1
+  const scale = size.dot / EDU_GUIDE_SIZES.m.dot
+  const strokes = template.paths.filter((p) => p.length > 1)
+  if (lineType === 'dotted') {
+    for (const path of strokes) {
+      let next = 0
+      let walked = 0
+      for (let i = 0; i < path.length; i += 1) {
+        if (i > 0) walked += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y)
+        if (walked < next && i < path.length - 1) continue
+        const w = path[i].w ?? size.dot
+        const r = Math.min(w * 0.9, 7 * scale, Math.max(1.6 * scale, w * 0.5 * scale))
+        ctx.beginPath()
+        ctx.arc(path[i].x, path[i].y, r, 0, Math.PI * 2)
+        ctx.fill()
+        next = walked + Math.max(6, r * 2.6)
+      }
+    }
+  } else {
+    ctx.lineWidth = size.line
+    ctx.setLineDash(lineType === 'dash' ? size.dash : [])
+    for (const path of strokes) {
+      ctx.beginPath()
+      path.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)))
+      ctx.stroke()
+    }
+  }
+  for (const d of nuqtah) {
+    ctx.beginPath()
+    ctx.arc(d.x, d.y, Math.min(d.r * 0.8, 7 * scale, Math.max(2, d.r * 0.5 * scale)), 0, Math.PI * 2)
+    ctx.fill()
+  }
 }
 
 /**
