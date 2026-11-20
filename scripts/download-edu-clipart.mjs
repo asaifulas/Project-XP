@@ -5,7 +5,7 @@
  *
  * Usage: node scripts/download-edu-clipart.mjs
  */
-import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -149,6 +149,8 @@ const LOCAL_ITEMS = [
 async function main() {
   await mkdir(OUT, { recursive: true })
   const localIds = new Set(LOCAL_ITEMS.map((item) => item.id))
+  const previous = JSON.parse(await readFile(path.join(OUT, 'manifest.json'), 'utf8').catch(() => '{"items":[]}'))
+  const coloringItems = (previous.items ?? []).filter((item) => item.file)
   for (const name of await readdir(OUT)) {
     if (name.endsWith('.svg') && !localIds.has(path.basename(name, '.svg'))) await unlink(path.join(OUT, name))
   }
@@ -174,7 +176,7 @@ async function main() {
         license: 'CC0-1.0 / Public Domain via Openclipart.org',
         note: 'Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art.',
         source: 'https://openclipart.org',
-        items: [...ok, ...LOCAL_ITEMS],
+        items: [...ok, ...LOCAL_ITEMS, ...coloringItems],
         failed: fail,
       },
       null,

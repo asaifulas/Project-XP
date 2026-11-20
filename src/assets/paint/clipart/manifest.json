@@ -1,6 +1,6 @@
 {
   "license": "CC0-1.0 / Public Domain via Openclipart.org",
-  "note": "Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art. Ten original line drawings (moon, star, KLCC, village house, Proton Saga, Kancil, Honda C50, grass, stone, bridge) are marked local and were drawn for this pack.",
+  "note": "Microsoft XP / Office Clip Gallery is proprietary — not used. This pack is Openclipart CC0 line art. Ten original line drawings (moon, star, KLCC, village house, Proton Saga, Kancil, Honda C50, grass, stone, bridge) are marked local and were drawn for this pack. Coloring-book drawings (drw-*) are royalty-free pages supplied by the project owner, trimmed to line art with page borders and footers removed.",
   "source": "https://openclipart.org",
   "items": [
     {
@@ -293,6 +293,264 @@
       "category": "transportation",
       "label": "Honda C50 cub",
       "local": true
+    },
+    {
+      "id": "drw-bird",
+      "category": "animals",
+      "label": "Bird (page)",
+      "file": "drw-bird.webp"
+    },
+    {
+      "id": "drw-cat",
+      "category": "animals",
+      "label": "Cats in basket",
+      "file": "drw-cat.webp"
+    },
+    {
+      "id": "drw-eliphant",
+      "category": "animals",
+      "label": "Elephant",
+      "file": "drw-eliphant.webp"
+    },
+    {
+      "id": "drw-girrafe",
+      "category": "animals",
+      "label": "Giraffe",
+      "file": "drw-girrafe.webp"
+    },
+    {
+      "id": "drw-hedgehog",
+      "category": "animals",
+      "label": "Hedgehog",
+      "file": "drw-hedgehog.webp"
+    },
+    {
+      "id": "drw-koala",
+      "category": "animals",
+      "label": "Koala",
+      "file": "drw-koala.webp"
+    },
+    {
+      "id": "drw-lion",
+      "category": "animals",
+      "label": "Lion (page)",
+      "file": "drw-lion.webp"
+    },
+    {
+      "id": "drw-lionking",
+      "category": "animals",
+      "label": "Savanna friends",
+      "file": "drw-lionking.webp"
+    },
+    {
+      "id": "drw-luak",
+      "category": "animals",
+      "label": "Raccoon",
+      "file": "drw-luak.webp"
+    },
+    {
+      "id": "drw-monkey",
+      "category": "animals",
+      "label": "Monkeys",
+      "file": "drw-monkey.webp"
+    },
+    {
+      "id": "drw-panda",
+      "category": "animals",
+      "label": "Panda",
+      "file": "drw-panda.webp"
+    },
+    {
+      "id": "drw-pingu",
+      "category": "animals",
+      "label": "Penguin",
+      "file": "drw-pingu.webp"
+    },
+    {
+      "id": "drw-polar-bear",
+      "category": "animals",
+      "label": "Polar bear",
+      "file": "drw-polar-bear.webp"
+    },
+    {
+      "id": "drw-squirrle",
+      "category": "animals",
+      "label": "Squirrel",
+      "file": "drw-squirrle.webp"
+    },
+    {
+      "id": "drw-tiger",
+      "category": "animals",
+      "label": "Tiger",
+      "file": "drw-tiger.webp"
+    },
+    {
+      "id": "drw-turtle",
+      "category": "animals",
+      "label": "Turtles",
+      "file": "drw-turtle.webp"
+    },
+    {
+      "id": "drw-zebra",
+      "category": "animals",
+      "label": "Zebra",
+      "file": "drw-zebra.webp"
+    },
+    {
+      "id": "drw-cement-mixer",
+      "category": "transportation",
+      "label": "Cement mixer",
+      "file": "drw-cement-mixer.webp"
+    },
+    {
+      "id": "drw-cyber-truck",
+      "category": "transportation",
+      "label": "Electric truck",
+      "file": "drw-cyber-truck.webp"
+    },
+    {
+      "id": "drw-ford-ranger",
+      "category": "transportation",
+      "label": "Pickup truck",
+      "file": "drw-ford-ranger.webp"
+    },
+    {
+      "id": "drw-lambo",
+      "category": "transportation",
+      "label": "Sports car",
+      "file": "drw-lambo.webp"
+    },
+    {
+      "id": "drw-monster-truck",
+      "category": "transportation",
+      "label": "Monster truck",
+      "file": "drw-monster-truck.webp"
+    },
+    {
+      "id": "drw-motor",
+      "category": "transportation",
+      "label": "Motorbike",
+      "file": "drw-motor.webp"
+    },
+    {
+      "id": "drw-police-car",
+      "category": "transportation",
+      "label": "Police car",
+      "file": "drw-police-car.webp"
+    },
+    {
+      "id": "drw-tractor",
+      "category": "transportation",
+      "label": "Tractor",
+      "file": "drw-tractor.webp"
+    },
+    {
+      "id": "drw-trailer",
+      "category": "transportation",
+      "label": "Truck trailer",
+      "file": "drw-trailer.webp"
+    },
+    {
+      "id": "drw-kl",
+      "category": "buildings",
+      "label": "Kuala Lumpur",
+      "file": "drw-kl.webp"
+    },
+    {
+      "id": "drw-klcc",
+      "category": "buildings",
+      "label": "KLCC (page)",
+      "file": "drw-klcc.webp"
+    },
+    {
+      "id": "drw-dubai",
+      "category": "buildings",
+      "label": "Dubai",
+      "file": "drw-dubai.webp"
+    },
+    {
+      "id": "drw-madinah",
+      "category": "buildings",
+      "label": "Madinah",
+      "file": "drw-madinah.webp"
+    },
+    {
+      "id": "drw-newyork",
+      "category": "buildings",
+      "label": "New York",
+      "file": "drw-newyork.webp"
+    },
+    {
+      "id": "drw-shanghai",
+      "category": "buildings",
+      "label": "Shanghai",
+      "file": "drw-shanghai.webp"
+    },
+    {
+      "id": "drw-singapore",
+      "category": "buildings",
+      "label": "Singapore",
+      "file": "drw-singapore.webp"
+    },
+    {
+      "id": "drw-tokyo",
+      "category": "buildings",
+      "label": "Tokyo",
+      "file": "drw-tokyo.webp"
+    },
+    {
+      "id": "drw-fire-dept",
+      "category": "buildings",
+      "label": "Fire fighter",
+      "file": "drw-fire-dept.webp"
+    },
+    {
+      "id": "drw-field",
+      "category": "nature",
+      "label": "Field",
+      "file": "drw-field.webp"
+    },
+    {
+      "id": "drw-mountain",
+      "category": "nature",
+      "label": "Mountains",
+      "file": "drw-mountain.webp"
+    },
+    {
+      "id": "drw-nature",
+      "category": "nature",
+      "label": "Forest",
+      "file": "drw-nature.webp"
+    },
+    {
+      "id": "drw-pond",
+      "category": "nature",
+      "label": "Pond",
+      "file": "drw-pond.webp"
+    },
+    {
+      "id": "drw-river",
+      "category": "nature",
+      "label": "River",
+      "file": "drw-river.webp"
+    },
+    {
+      "id": "drw-village",
+      "category": "nature",
+      "label": "Village",
+      "file": "drw-village.webp"
+    },
+    {
+      "id": "drw-flower",
+      "category": "plants",
+      "label": "Flowers",
+      "file": "drw-flower.webp"
+    },
+    {
+      "id": "drw-tree",
+      "category": "plants",
+      "label": "Tree (drawing)",
+      "file": "drw-tree.webp"
     }
   ],
   "failed": []

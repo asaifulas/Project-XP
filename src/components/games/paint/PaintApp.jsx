@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import usePhoneGameLayout from '../_shared/usePhoneGameLayout'
 import { cursorForTool } from './cursors.js'
 import PaintCascadingMenu from './PaintCascadingMenu.jsx'
+import ToolIcon from './ToolIcon.jsx'
+import { toolIconCursor } from './toolCursor.js'
 import { magneticSnapToPaths } from './eduMagnetic.js'
 import {
   fitStickerSize,
@@ -14,7 +16,7 @@ import {
   tintInk,
   viewBoxAspect,
 } from './stickers.js'
-import { EDU_CLIPART_CATEGORIES, loadSvgImage } from './eduClipart.js'
+import { EDU_CLIPART_CATEGORIES, EDU_DRAWING_CATEGORIES, loadImageUrl, loadSvgImage } from './eduClipart.js'
 import {
   EDU_A4_H,
   EDU_A4_W,
@@ -118,6 +120,7 @@ export default function PaintApp({ keyboardActive = true }) {
   const startRef = useRef(/** @type {{ x: number, y: number } | null} */ (null))
   const lastRef = useRef(/** @type {{ x: number, y: number } | null} */ (null))
   const undoRef = useRef(/** @type {ImageData[]} */ ([]))
+  const redoRef = useRef(/** @type {ImageData[]} */ ([]))
   const activePointerIdRef = useRef(/** @type {number | null} */ (null))
   const mobileDrawToolRef = useRef(
     /** @type {'pencil' | 'brush' | 'airbrush' | 'eraser'} */ ('brush'),
@@ -159,6 +162,9 @@ export default function PaintApp({ keyboardActive = true }) {
   const [status, setStatus] = useState('For Help, click Help Topics on the Help Menu.')
   const [coords, setCoords] = useState('')
   const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+  const [toolTip, setToolTip] = useState(/** @type {{ text: string, x: number, y: number } | null} */ (null))
+  const paintRootRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   const [fileName, setFileName] = useState('untitled')
   const [menuOpen, setMenuOpen] = useState(/** @type {null | string} */ (null))
   const [attrsOpen, setAttrsOpen] = useState(false)
@@ -206,7 +212,9 @@ export default function PaintApp({ keyboardActive = true }) {
     const next = [...undoRef.current, snap]
     if (next.length > MAX_UNDO) next.shift()
     undoRef.current = next
+    redoRef.current = []
     setCanUndo(true)
+    setCanRedo(false)
   }, [getCtx])
 
   const syncOverlaySize = useCallback((w, h) => {
@@ -260,6 +268,12 @@ export default function PaintApp({ keyboardActive = true }) {
     },
     [],
   )
+
+  const restoreColoringLines = useCallback(() => {
+    const template = eduTemplateRef.current
+    const ctx = getCtx()
+    if (template?.kind === 'drawing' && ctx) drawEduTemplate(ctx, template, 'straight', 'm')
+  }, [getCtx])
 
   const clearOverlay = useCallback(() => {
     const overlay = overlayRef.current
@@ -347,17 +361,19 @@ export default function PaintApp({ keyboardActive = true }) {
     (templateId) => {
       const template = getEduTemplate(templateId)
       const canvas = canvasRef.current
-      if (!template?.svgMarkup || !canvas) {
+      if (!(template?.svgMarkup || template?.imageUrl) || !canvas) {
         setStatus('Clipart not found')
         return
       }
       commitSticker()
       setStatus(`Clipart · ${template.label} · drag to place, then click outside to keep`)
-      loadSvgImage(template.svgMarkup)
+      const artwork = template.svgMarkup ? loadSvgImage(template.svgMarkup) : loadImageUrl(template.imageUrl)
+      artwork
         .then((img) => {
           const page = canvasRef.current
           if (!page) return
-          const aspect = viewBoxAspect(template.svgMarkup) ?? (img.naturalWidth / img.naturalHeight || 1)
+          const ratio = img.naturalWidth / img.naturalHeight || 1
+          const aspect = (template.svgMarkup && viewBoxAspect(template.svgMarkup)) || ratio
           const ink = document.createElement('canvas')
           const long = 640
           ink.width = aspect >= 1 ? long : Math.round(long * aspect)
@@ -438,6 +454,14 @@ export default function PaintApp({ keyboardActive = true }) {
         )
       }
 
+      if (template.kind === 'drawing') {
+        setStatus(`Edu · loading ${template.label}…`)
+        loadImageUrl(template.imageUrl)
+          .then((img) => finishApply({ ...template, image: img }))
+          .catch(() => setStatus('Drawing failed to load'))
+        return
+      }
+
       // Clipart: load the SVG as an image so the guide looks like the real picture.
       if (template.kind === 'clipart' && template.svgMarkup) {
         setStatus(`Edu · loading ${template.label}…`)
@@ -482,6 +506,7 @@ export default function PaintApp({ keyboardActive = true }) {
 
   // Paint Edu guide after size state commits (React width/height props used to wipe the bitmap).
   const eduGuideStylePrev = useRef(`${eduLineType}:${eduGuideSize}`)
+  const eduPageGenRef = useRef(eduPaintGen)
   useLayoutEffect(() => {
     const template = eduTemplateRef.current
     if (!eduTemplateId || !template) return
@@ -496,6 +521,9 @@ export default function PaintApp({ keyboardActive = true }) {
     const styleKey = `${eduLineType}:${eduGuideSize}`
     const styleChanged = eduGuideStylePrev.current !== styleKey
     eduGuideStylePrev.current = styleKey
+    const newPage = eduPageGenRef.current !== eduPaintGen
+    eduPageGenRef.current = eduPaintGen
+    if (template.kind === 'drawing' && styleChanged && !newPage) return
     if (styleChanged && eduPaintGen > 0) {
       pushUndo()
     }
@@ -710,29 +738,62 @@ export default function PaintApp({ keyboardActive = true }) {
     [fg, stroke],
   )
 
-  const doUndo = useCallback(() => {
-    commitSticker()
+  const restoreSnapshot = useCallback(
+    (snap) => {
+      const canvas = canvasRef.current
+      const ctx = getCtx()
+      if (!canvas || !ctx) return
+      if (snap.width !== canvas.width || snap.height !== canvas.height) {
+        canvas.width = snap.width
+        canvas.height = snap.height
+        syncOverlaySize(snap.width, snap.height)
+        setCanvasW(snap.width)
+        setCanvasH(snap.height)
+        setAttrW(String(snap.width))
+        setAttrH(String(snap.height))
+      }
+      ctx.putImageData(snap, 0, 0)
+    },
+    [getCtx, syncOverlaySize],
+  )
+
+  const currentSnapshot = useCallback(() => {
     const canvas = canvasRef.current
     const ctx = getCtx()
-    if (!canvas || !ctx || undoRef.current.length === 0) {
+    return canvas && ctx ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null
+  }, [getCtx])
+
+  const doUndo = useCallback(() => {
+    commitSticker()
+    const current = currentSnapshot()
+    if (!current || undoRef.current.length === 0) {
       setStatus('Nothing to undo')
       return
     }
     const snap = undoRef.current.pop()
     if (!snap) return
-    if (snap.width !== canvas.width || snap.height !== canvas.height) {
-      canvas.width = snap.width
-      canvas.height = snap.height
-      syncOverlaySize(snap.width, snap.height)
-      setCanvasW(snap.width)
-      setCanvasH(snap.height)
-      setAttrW(String(snap.width))
-      setAttrH(String(snap.height))
-    }
-    ctx.putImageData(snap, 0, 0)
+    redoRef.current = [...redoRef.current, current].slice(-MAX_UNDO)
+    restoreSnapshot(snap)
     setCanUndo(undoRef.current.length > 0)
+    setCanRedo(true)
     setStatus('Undo')
-  }, [commitSticker, getCtx, syncOverlaySize])
+  }, [commitSticker, currentSnapshot, restoreSnapshot])
+
+  const doRedo = useCallback(() => {
+    commitSticker()
+    const current = currentSnapshot()
+    if (!current || redoRef.current.length === 0) {
+      setStatus('Nothing to redo')
+      return
+    }
+    const snap = redoRef.current.pop()
+    if (!snap) return
+    undoRef.current = [...undoRef.current, current].slice(-MAX_UNDO)
+    restoreSnapshot(snap)
+    setCanRedo(redoRef.current.length > 0)
+    setCanUndo(true)
+    setStatus('Redo')
+  }, [commitSticker, currentSnapshot, restoreSnapshot])
 
   const doSave = useCallback(async () => {
     const canvas = canvasRef.current
@@ -757,9 +818,16 @@ export default function PaintApp({ keyboardActive = true }) {
   useEffect(() => {
     if (!keyboardActive) return undefined
     function onKey(event) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+      const key = event.key.toLowerCase()
+      if ((event.metaKey || event.ctrlKey) && key === 'z' && event.shiftKey) {
+        event.preventDefault()
+        doRedo()
+      } else if ((event.metaKey || event.ctrlKey) && key === 'z') {
         event.preventDefault()
         doUndo()
+      } else if ((event.metaKey || event.ctrlKey) && key === 'y') {
+        event.preventDefault()
+        doRedo()
       } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault()
         void doSave()
@@ -770,7 +838,7 @@ export default function PaintApp({ keyboardActive = true }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [keyboardActive, doUndo, doSave])
+  }, [keyboardActive, doRedo, doUndo, doSave])
 
   const doOpen = useCallback(
     (file) => {
@@ -1070,6 +1138,7 @@ export default function PaintApp({ keyboardActive = true }) {
         startRef.current = pt
         lastRef.current = pt
         strokeLine(ctx, pt, pt, { drawTool, erase: drawTool === 'eraser' })
+        if (drawTool === 'eraser') restoreColoringLines()
         setStatus(
           drawTool === 'eraser'
             ? 'Erasing…'
@@ -1106,6 +1175,7 @@ export default function PaintApp({ keyboardActive = true }) {
 
       if (tool === 'pencil' || tool === 'eraser' || tool === 'brush' || tool === 'airbrush') {
         strokeLine(ctx, startPt, startPt, { drawTool: tool, erase: tool === 'eraser' })
+        if (tool === 'eraser') restoreColoringLines()
       }
     },
     [
@@ -1124,6 +1194,7 @@ export default function PaintApp({ keyboardActive = true }) {
       tool,
       updateBrushPreviewFromEvent,
       zoom,
+      restoreColoringLines,
     ],
   )
 
@@ -1197,6 +1268,7 @@ export default function PaintApp({ keyboardActive = true }) {
           drawTool,
           erase: drawTool === 'eraser',
         })
+        if (drawTool === 'eraser') restoreColoringLines()
         lastRef.current = nextPt
         return
       }
@@ -1218,6 +1290,7 @@ export default function PaintApp({ keyboardActive = true }) {
       syncPinchFromTouches,
       tool,
       updateBrushPreviewFromEvent,
+      restoreColoringLines,
     ],
   )
 
@@ -1238,6 +1311,7 @@ export default function PaintApp({ keyboardActive = true }) {
       drawingRef.current = false
       activePointerIdRef.current = null
       panRef.current = null
+      if (tool === 'eraser') restoreColoringLines()
       const ctx = getCtx()
       const pt = event ? canvasPoint(event) : lastRef.current
       if (
@@ -1255,7 +1329,7 @@ export default function PaintApp({ keyboardActive = true }) {
         setStatus('Mobile layout — touch to paint · pinch to zoom · Hand tool to pan')
       }
     },
-    [canvasPoint, clearOverlay, drawShape, getCtx, mobileMode, tool],
+    [canvasPoint, clearOverlay, drawShape, getCtx, mobileMode, tool, restoreColoringLines],
   )
 
   const onPointerUp = useCallback(
@@ -1316,20 +1390,28 @@ export default function PaintApp({ keyboardActive = true }) {
   }, [canvasH, canvasW, resizeCanvas])
 
   const toolDefs = [
-    { id: 'pencil', title: 'Pencil', icon: '✎' },
-    { id: 'brush', title: 'Brush', icon: '●' },
-    { id: 'airbrush', title: 'Airbrush', icon: '✧' },
-    { id: 'eraser', title: 'Eraser', icon: 'eraser' },
-    { id: 'fill', title: 'Fill With Color', icon: '▤' },
-    { id: 'eyedropper', title: 'Pick Color', icon: '⌖' },
-    { id: 'magnify', title: 'Magnifier', icon: '🔍' },
-    { id: 'hand', title: 'Hand (pan)', icon: '✋' },
-    { id: 'text', title: 'Text', icon: 'T' },
-    { id: 'line', title: 'Line', icon: '/' },
-    { id: 'rect', title: 'Rectangle', icon: '□' },
-    { id: 'ellipse', title: 'Ellipse', icon: '○' },
+    { id: 'pencil', title: 'Pencil', tip: 'Pencil: thin, hard line' },
+    { id: 'brush', title: 'Brush', tip: 'Brush: paint with a soft brush' },
+    { id: 'airbrush', title: 'Airbrush', tip: 'Airbrush: soft spray of colour' },
+    { id: 'eraser', title: 'Eraser', tip: 'Eraser: rub out to white' },
+    { id: 'fill', title: 'Fill With Color', tip: 'Fill: flood a closed area with colour' },
+    { id: 'eyedropper', title: 'Pick Color', tip: 'Pick colour: copy a colour from the picture' },
+    { id: 'magnify', title: 'Magnifier', tip: 'Magnifier: zoom in on a spot' },
+    { id: 'hand', title: 'Hand (pan)', tip: 'Hand: drag to move around the picture' },
+    { id: 'text', title: 'Text', tip: 'Text: type words onto the picture' },
+    { id: 'line', title: 'Line', tip: 'Line: draw a straight line' },
+    { id: 'rect', title: 'Rectangle', tip: 'Rectangle: draw a box' },
+    { id: 'ellipse', title: 'Ellipse', tip: 'Ellipse: draw an oval' },
   ]
   const visibleToolDefs = toolDefs
+
+  const showToolTip = useCallback((text, button) => {
+    const root = paintRootRef.current
+    if (!root) return
+    const r = button.getBoundingClientRect()
+    const base = root.getBoundingClientRect()
+    setToolTip({ text, x: r.right - base.left + 6, y: r.top - base.top + r.height / 2 })
+  }, [])
 
   const openAttributes = useCallback(() => {
     setAttrW(String(canvasW))
@@ -1350,7 +1432,10 @@ export default function PaintApp({ keyboardActive = true }) {
     },
     {
       id: 'Edit',
-      items: [{ label: 'Undo\tCtrl+Z', action: doUndo, disabled: !canUndo }],
+      items: [
+        { label: 'Undo\tCtrl+Z', action: doUndo, disabled: !canUndo },
+        { label: 'Redo\tCtrl+Y', action: doRedo, disabled: !canRedo },
+      ],
     },
     {
       id: 'View',
@@ -1538,8 +1623,17 @@ export default function PaintApp({ keyboardActive = true }) {
         },
         {
           label: 'Drawing',
-          disabled: true,
-          submenu: [{ label: 'Coming soon', disabled: true }],
+          submenu: EDU_DRAWING_CATEGORIES.map((category) => ({
+            label: category.label,
+            submenu: category.items.map((item) => {
+              const id = `drawing:${item.id}`
+              return {
+                label: item.label,
+                checked: eduTemplateId === id,
+                action: () => applyEduTemplate(id),
+              }
+            }),
+          })),
         },
         { separator: true },
         {
@@ -1604,14 +1698,7 @@ export default function PaintApp({ keyboardActive = true }) {
       ? panRef.current
         ? 'grabbing'
         : cursorForTool('hand')
-      : tool === 'text'
-        ? cursorForTool('text')
-        : stampTool
-          ? cursorForTool(stampTool, {
-              widthCss: Math.max(6, brushDiameterCss),
-              erase: stampTool === 'eraser',
-            })
-          : cursorForTool(tool)
+      : toolIconCursor(tool)
   const canvasCursor = stickerHover ?? stickerCursor ?? toolCursor
   const toolBtnClass = useMobileLayout
     ? 'flex h-8 w-8 shrink-0 items-center justify-center border text-[13px] leading-none'
@@ -1621,6 +1708,7 @@ export default function PaintApp({ keyboardActive = true }) {
 
   return (
     <div
+      ref={paintRootRef}
       className="relative flex min-h-0 flex-1 flex-col bg-[#c0c0c0] font-xp text-[11px] text-black"
       onClick={() => setMenuOpen(null)}
     >
@@ -1706,9 +1794,12 @@ export default function PaintApp({ keyboardActive = true }) {
               <button
                 key={t.id}
                 type="button"
-                title={t.title}
                 aria-label={t.title}
                 aria-pressed={tool === t.id}
+                onPointerEnter={(event) => showToolTip(t.tip, event.currentTarget)}
+                onPointerLeave={() => setToolTip(null)}
+                onFocus={(event) => showToolTip(t.tip, event.currentTarget)}
+                onBlur={() => setToolTip(null)}
                 className={`${toolBtnClass} ${
                   tool === t.id
                     ? 'border-[#808080] bg-[#c0c0c0] shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff]'
@@ -1719,23 +1810,30 @@ export default function PaintApp({ keyboardActive = true }) {
                   setTool(/** @type {(typeof TOOLS)[number]} */ (t.id))
                 }}
               >
-                {t.icon === 'eraser' ? (
-                  <span
-                    className={`block rotate-[-20deg] border border-[#333] bg-[#f2d84a] shadow-[inset_-2px_0_0_#ffe566] ${
-                      useMobileLayout ? 'h-2.5 w-4' : 'h-[10px] w-[14px]'
-                    }`}
-                    aria-hidden
-                  />
-                ) : t.id === 'text' ? (
-                  <span className="font-bold leading-none" aria-hidden>
-                    T
-                  </span>
-                ) : (
-                  t.icon
-                )}
+                <ToolIcon id={t.id} />
               </button>
             ))}
           </div>
+
+          {useMobileLayout ? (
+            <div className="flex flex-row items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
+              {[
+                { label: 'Undo', action: doUndo, disabled: !canUndo },
+                { label: 'Redo', action: doRedo, disabled: !canRedo },
+                { label: 'Clear', action: () => clearCanvas(true), disabled: false },
+              ].map((btn) => (
+                <button
+                  key={btn.label}
+                  type="button"
+                  disabled={btn.disabled}
+                  className="h-6 flex-1 border border-[#808080] bg-[#c0c0c0] px-1 text-[11px] shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] enabled:active:shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff] disabled:text-[#808080]"
+                  onClick={btn.action}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div
             className={`flex items-center justify-center gap-1 border border-[#808080] bg-[#c0c0c0] ${
@@ -2146,6 +2244,15 @@ export default function PaintApp({ keyboardActive = true }) {
               </div>
             </div>
           </div>
+        </div>
+      ) : null}
+      {toolTip ? (
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute z-[60] -translate-y-1/2 whitespace-nowrap border border-black bg-[#ffffe1] px-1.5 py-0.5 text-[11px] text-black shadow-[1px_1px_0_#000]"
+          style={{ left: toolTip.x, top: toolTip.y }}
+        >
+          {toolTip.text}
         </div>
       ) : null}
     </div>

@@ -7,6 +7,7 @@ import {
   drawClipartImage,
   getClipartLabel,
   getClipartPaths,
+  getClipartRaster,
   getClipartSvg,
 } from './eduClipart.js'
 import { getJawiLetter } from './eduJawi.js'
@@ -27,6 +28,7 @@ export const EDU_A4_H = 842
  *   outline?: Point[][]
  *   nuqtah?: { x: number, y: number, r: number }[]
  *   svgMarkup?: string | null
+ *   imageUrl?: string | null
  *   guideImage?: CanvasImageSource | null
  * }} EduTemplate
  */
@@ -864,11 +866,28 @@ export function prepareTemplatePaths(strokes, opts = {}) {
 export function getEduTemplate(id) {
   if (!id) return null
 
+  if (id.startsWith('drawing:')) {
+    const slug = id.slice(8)
+    const imageUrl = getClipartRaster(slug)
+    if (!imageUrl) return null
+    return {
+      id,
+      label: getClipartLabel(slug),
+      kind: 'drawing',
+      closed: false,
+      paths: [],
+      svgMarkup: null,
+      imageUrl,
+      guideImage: null,
+    }
+  }
+
   if (id.startsWith('clipart:')) {
     const slug = id.slice(8)
     const svgMarkup = getClipartSvg(slug)
+    const imageUrl = getClipartRaster(slug)
     const strokes = getClipartPaths(slug)
-    if (!svgMarkup && !strokes.length) return null
+    if (!svgMarkup && !imageUrl && !strokes.length) return null
     return {
       id,
       label: getClipartLabel(slug),
@@ -878,6 +897,7 @@ export function getEduTemplate(id) {
       // The picture itself stays a free-hand guide.
       paths: [],
       svgMarkup,
+      imageUrl,
       guideImage: null,
     }
   }
@@ -1006,7 +1026,24 @@ export const EDU_GUIDE_SIZES = {
  * @param {'dotted' | 'dash' | 'straight'} lineType
  * @param {EduGuideSize} [guideSize]
  */
+/**
+ * Coloring page: scaled to cover the whole A4 sheet, so the lines run to the edges and
+ * the paper between a line and the page border can be filled.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {HTMLImageElement} img
+ */
+export function drawDrawingPage(ctx, img) {
+  const scale = Math.max(EDU_A4_W / img.naturalWidth, EDU_A4_H / img.naturalHeight)
+  const w = img.naturalWidth * scale
+  const h = img.naturalHeight * scale
+  ctx.drawImage(img, (EDU_A4_W - w) / 2, (EDU_A4_H - h) / 2, w, h)
+}
+
 export function drawEduTemplate(ctx, template, lineType, guideSize = 'm') {
+  if (template.kind === 'drawing') {
+    if (template.image) drawDrawingPage(ctx, template.image)
+    return
+  }
   const size = EDU_GUIDE_SIZES[guideSize] ?? EDU_GUIDE_SIZES.m
   ctx.save()
   ctx.lineCap = 'round'

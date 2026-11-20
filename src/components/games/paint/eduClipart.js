@@ -28,11 +28,25 @@ for (const [filePath, raw] of Object.entries(svgModules)) {
   if (base && typeof raw === 'string') SVG_BY_ID[base] = raw
 }
 
+/** Coloring-book drawings: line art with transparent paper, one WebP per picture. */
+const rasterModules = import.meta.glob('../../../assets/paint/clipart-drawings/*.webp', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+})
+
+/** @type {Record<string, string>} */
+const RASTER_BY_ID = {}
+for (const [filePath, url] of Object.entries(rasterModules)) {
+  const base = filePath.split('/').pop()?.replace(/\.webp$/i, '')
+  if (base && typeof url === 'string') RASTER_BY_ID[base] = url
+}
+
 const CATEGORY_LABELS = {
   animals: 'Animals',
   transportation: 'Transportation',
   plants: 'Plants',
-  buildings: 'Buildings',
+  buildings: 'City',
   food: 'Food',
   nature: 'Nature',
   objects: 'Objects',
@@ -46,11 +60,15 @@ export function clipartBox() {
 /**
  * @type {ClipartCategory[]}
  */
-export const EDU_CLIPART_CATEGORIES = (() => {
+/**
+ * @param {(id: string) => boolean} accept
+ * @returns {ClipartCategory[]}
+ */
+function buildCategories(accept) {
   /** @type {Record<string, ClipartItem[]>} */
   const byCat = {}
   for (const item of manifest.items ?? []) {
-    if (!SVG_BY_ID[item.id]) continue
+    if (!accept(item.id)) continue
     const cat = item.category || 'objects'
     if (!byCat[cat]) byCat[cat] = []
     byCat[cat].push({ id: item.id, label: item.label })
@@ -62,7 +80,12 @@ export const EDU_CLIPART_CATEGORIES = (() => {
       label: CATEGORY_LABELS[id],
       items: byCat[id],
     }))
-})()
+}
+
+export const EDU_CLIPART_CATEGORIES = buildCategories((id) => Boolean(SVG_BY_ID[id]))
+
+/** Coloring-book pages for Edu → Drawing (one full A4 page each). */
+export const EDU_DRAWING_CATEGORIES = buildCategories((id) => Boolean(RASTER_BY_ID[id]))
 
 /** @returns {string[]} */
 export function listEduClipartIds() {
@@ -80,6 +103,27 @@ export function listEduClipartIds() {
  */
 export function getClipartSvg(slug) {
   return SVG_BY_ID[slug] ?? null
+}
+
+/**
+ * @param {string} slug
+ * @returns {string | null}
+ */
+export function getClipartRaster(slug) {
+  return RASTER_BY_ID[slug] ?? null
+}
+
+/**
+ * @param {string} url
+ * @returns {Promise<HTMLImageElement>}
+ */
+export function loadImageUrl(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Image failed to load'))
+    img.src = url
+  })
 }
 
 /** @type {Record<string, Point[][]>} */
@@ -112,11 +156,8 @@ export function getClipartPaths(slug) {
  * @param {string} slug
  */
 export function getClipartLabel(slug) {
-  for (const cat of EDU_CLIPART_CATEGORIES) {
-    const hit = cat.items.find((item) => item.id === slug)
-    if (hit) return hit.label
-  }
-  return slug
+  const hit = (manifest.items ?? []).find((item) => item.id === slug)
+  return hit?.label ?? slug
 }
 
 /**
