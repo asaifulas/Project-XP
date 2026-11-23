@@ -29,6 +29,7 @@ import {
   getEduTemplate,
 } from './eduTemplates.js'
 import { eduJawiMenuItems } from './eduJawi.js'
+import { eduNeighbours } from './eduSequence.js'
 import {
   CANVAS_H,
   CANVAS_SCROLL_PAD,
@@ -1052,6 +1053,8 @@ export default function PaintApp({ keyboardActive = true }) {
       // Touch/pen: treat contact as tool-down (ignore mouse button quirks).
       if (useMobilePaint && (event.pointerType === 'touch' || event.pointerType === 'pen')) {
         event.preventDefault()
+        // iPad: a long press while tracing can start a page text selection; drop it.
+        window.getSelection?.()?.removeAllRanges()
       }
 
       event.currentTarget.setPointerCapture?.(event.pointerId)
@@ -1707,16 +1710,24 @@ export default function PaintApp({ keyboardActive = true }) {
       : toolIconCursor(tool)
   const canvasCursor = stickerHover ?? stickerCursor ?? toolCursor
   const toolBtnClass = useMobileLayout
-    ? 'flex h-8 w-8 shrink-0 items-center justify-center border text-[13px] leading-none'
+    ? 'flex h-11 w-11 shrink-0 items-center justify-center border text-[13px] leading-none'
     : 'flex h-[26px] w-[26px] items-center justify-center border text-[12px] leading-none'
-  const paletteCell = useMobileLayout ? 16 : 15
-  const fgBgBox = useMobileLayout ? 32 : 34
+  const toolIconSize = useMobileLayout ? 26 : 16
+  const paletteCell = useMobileLayout ? 24 : 15
+  const fgBgBox = useMobileLayout ? 46 : 34
+  const fgBgSwatch = useMobileLayout ? 20 : 16
+  const eduSteps = eduNeighbours(eduTemplateId)
 
   return (
     <div
       ref={paintRootRef}
-      className="relative flex min-h-0 flex-1 flex-col bg-[#c0c0c0] font-xp text-[11px] text-black"
+      className="relative flex min-h-0 flex-1 select-none flex-col bg-[#c0c0c0] font-xp text-[11px] text-black"
+      style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
       onClick={() => setMenuOpen(null)}
+      onSelectStart={(event) => {
+        // Only text fields may select; stops iPad tracing from selecting the whole window.
+        if (!event.target.closest?.('input, textarea')) event.preventDefault()
+      }}
     >
       <div
         className="xp-menubar relative flex shrink-0 items-center gap-1"
@@ -1792,7 +1803,7 @@ export default function PaintApp({ keyboardActive = true }) {
           <div
             className={
               useMobileLayout
-                ? 'flex flex-row items-center gap-0.5 overflow-x-auto'
+                ? 'flex flex-row flex-wrap items-center justify-center gap-0.5'
                 : `m-0.5 grid grid-cols-2 gap-0 border border-[#808080] bg-[#c0c0c0] p-0.5`
             }
           >
@@ -1816,7 +1827,7 @@ export default function PaintApp({ keyboardActive = true }) {
                   setTool(/** @type {(typeof TOOLS)[number]} */ (t.id))
                 }}
               >
-                <ToolIcon id={t.id} />
+                <ToolIcon id={t.id} size={toolIconSize} />
               </button>
             ))}
           </div>
@@ -1824,15 +1835,22 @@ export default function PaintApp({ keyboardActive = true }) {
           {useMobileLayout ? (
             <div className="flex flex-row items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
               {[
+                ...(eduSteps
+                  ? [{ label: '◄ Prev', title: 'Previous page', action: () => applyEduTemplate(eduSteps.prev) }]
+                  : []),
                 { label: 'Undo', action: doUndo, disabled: !canUndo },
                 { label: 'Redo', action: doRedo, disabled: !canRedo },
                 { label: 'Clear', action: () => clearCanvas(true), disabled: false },
+                ...(eduSteps
+                  ? [{ label: 'Next ►', title: 'Next page', action: () => applyEduTemplate(eduSteps.next) }]
+                  : []),
               ].map((btn) => (
                 <button
                   key={btn.label}
                   type="button"
                   disabled={btn.disabled}
-                  className="h-6 flex-1 border border-[#808080] bg-[#c0c0c0] px-1 text-[11px] shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] enabled:active:shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff] disabled:text-[#808080]"
+                  title={btn.title}
+                  className="h-9 flex-1 whitespace-nowrap border border-[#808080] bg-[#c0c0c0] px-1 text-[13px] shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] enabled:active:shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff] disabled:text-[#808080]"
                   onClick={btn.action}
                 >
                   {btn.label}
@@ -2049,7 +2067,7 @@ export default function PaintApp({ keyboardActive = true }) {
                   rows={2}
                   spellCheck={false}
                   aria-label="Paint text"
-                  className="absolute z-[6] min-h-[1.2em] min-w-[4em] resize-both border border-dashed border-[#000080] bg-white/90 p-0.5 outline-none"
+                  className="absolute z-[6] min-h-[1.2em] min-w-[4em] resize-both select-text border border-dashed border-[#000080] bg-white/90 p-0.5 outline-none"
                   style={{
                     left: textEdit.x * zoom,
                     top: textEdit.y * zoom,
@@ -2122,10 +2140,10 @@ export default function PaintApp({ keyboardActive = true }) {
             className="absolute border border-black"
             style={{
               background: bg,
-              width: useMobileLayout ? 14 : 16,
-              height: useMobileLayout ? 14 : 16,
-              left: 14,
-              top: useMobileLayout ? 14 : 14,
+              width: fgBgSwatch,
+              height: fgBgSwatch,
+              left: useMobileLayout ? 20 : 14,
+              top: useMobileLayout ? 20 : 14,
             }}
             title="Background"
           />
@@ -2133,10 +2151,10 @@ export default function PaintApp({ keyboardActive = true }) {
             className="absolute z-[1] border border-black"
             style={{
               background: fg,
-              width: useMobileLayout ? 14 : 16,
-              height: useMobileLayout ? 14 : 16,
-              left: useMobileLayout ? 4 : 6,
-              top: useMobileLayout ? 4 : 6,
+              width: fgBgSwatch,
+              height: fgBgSwatch,
+              left: 6,
+              top: 6,
             }}
             title="Foreground"
           />
@@ -2172,7 +2190,9 @@ export default function PaintApp({ keyboardActive = true }) {
           type="color"
           value={fg}
           onChange={(event) => setFg(event.target.value)}
-          className="ml-0.5 h-7 w-8 cursor-pointer border border-[#808080] bg-[#c0c0c0]"
+          className={`ml-0.5 shrink-0 cursor-pointer border border-[#808080] bg-[#c0c0c0] ${
+            useMobileLayout ? 'h-11 w-11' : 'h-7 w-8'
+          }`}
           aria-label="Edit colors"
           title="Edit Colors"
         />
