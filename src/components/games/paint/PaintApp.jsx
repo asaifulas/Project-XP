@@ -695,9 +695,17 @@ export default function PaintApp({ keyboardActive = true }) {
         ctx.strokeStyle = opts.color ?? fg
       }
       ctx.beginPath()
-      ctx.moveTo(from.x, from.y)
-      ctx.lineTo(to.x, to.y)
-      ctx.stroke()
+      if (Math.hypot(to.x - from.x, to.y - from.y) < 0.5) {
+        // A tap (e.g. the titik of ba / ta / fa). Safari draws nothing for a zero-length
+        // round-capped line, so paint the dot as a filled circle instead.
+        ctx.fillStyle = ctx.strokeStyle
+        ctx.arc(from.x, from.y, ctx.lineWidth / 2, 0, Math.PI * 2)
+        ctx.fill()
+      } else {
+        ctx.moveTo(from.x, from.y)
+        ctx.lineTo(to.x, to.y)
+        ctx.stroke()
+      }
       ctx.restore()
     },
     [bg, fg, widthForDrawTool],
@@ -1836,13 +1844,32 @@ export default function PaintApp({ keyboardActive = true }) {
             <div className="flex flex-row items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
               {[
                 ...(eduSteps
-                  ? [{ label: '◄ Prev', title: 'Previous page', action: () => applyEduTemplate(eduSteps.prev) }]
+                  ? [
+                      {
+                        label: '◄ Prev',
+                        title: 'Previous page',
+                        tone: 'bg-[#2f6fd6] font-bold text-white',
+                        action: () => applyEduTemplate(eduSteps.prev),
+                      },
+                    ]
                   : []),
                 { label: 'Undo', action: doUndo, disabled: !canUndo },
                 { label: 'Redo', action: doRedo, disabled: !canRedo },
-                { label: 'Clear', action: () => clearCanvas(true), disabled: false },
+                {
+                  label: 'Clear',
+                  tone: 'bg-[#d83b3b] font-bold text-white',
+                  action: () => clearCanvas(true),
+                  disabled: false,
+                },
                 ...(eduSteps
-                  ? [{ label: 'Next ►', title: 'Next page', action: () => applyEduTemplate(eduSteps.next) }]
+                  ? [
+                      {
+                        label: 'Next ►',
+                        title: 'Next page',
+                        tone: 'bg-[#2e9a3e] font-bold text-white',
+                        action: () => applyEduTemplate(eduSteps.next),
+                      },
+                    ]
                   : []),
               ].map((btn) => (
                 <button
@@ -1850,7 +1877,9 @@ export default function PaintApp({ keyboardActive = true }) {
                   type="button"
                   disabled={btn.disabled}
                   title={btn.title}
-                  className="h-9 flex-1 whitespace-nowrap border border-[#808080] bg-[#c0c0c0] px-1 text-[13px] shadow-[inset_1px_1px_0_#fff,inset_-1px_-1px_0_#808080] enabled:active:shadow-[inset_1px_1px_0_#808080,inset_-1px_-1px_0_#fff] disabled:text-[#808080]"
+                  className={`h-9 flex-1 whitespace-nowrap border border-[#808080] px-1 text-[13px] shadow-[inset_1px_1px_0_rgba(255,255,255,0.7),inset_-1px_-1px_0_rgba(0,0,0,0.45)] enabled:active:shadow-[inset_1px_1px_0_rgba(0,0,0,0.45),inset_-1px_-1px_0_rgba(255,255,255,0.7)] disabled:text-[#808080] ${
+                    btn.tone ?? 'bg-[#c0c0c0] text-black'
+                  }`}
                   onClick={btn.action}
                 >
                   {btn.label}
@@ -2027,7 +2056,11 @@ export default function PaintApp({ keyboardActive = true }) {
                   setBrushPreview(null)
                   setStickerHover(null)
                 }}
-                onPointerCancel={() => {
+                onPointerCancel={(event) => {
+                  // Forget the cancelled finger, or the next single tap is mistaken for a pinch.
+                  touchPointsRef.current.delete(event.pointerId)
+                  if (touchPointsRef.current.size < 2) pinchRef.current = null
+                  activePointerIdRef.current = null
                   drawingRef.current = false
                   clearOverlay()
                   startRef.current = null
