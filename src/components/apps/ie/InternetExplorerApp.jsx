@@ -1,13 +1,41 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ieTabIcon from '../../../assets/icons/ie.png'
+import {
+  Caret,
+  FavoritesIcon,
+  GlobeIcon,
+  GoIcon,
+  HistoryIcon,
+  HomeIcon,
+  MailIcon,
+  NavArrowIcon,
+  PageIcon,
+  PrintIcon,
+  RefreshIcon,
+  SearchIcon,
+  StopIcon,
+  WindowsFlag,
+} from '../../window/retro/xpIcons'
 
-const ieToolbarBg =
-  'border-b border-[#7a99c8] bg-[linear-gradient(180deg,#e8f1fc_0%,#d0e4f8_45%,#b8d2f0_100%)]'
+/** Luna rebar band, shared with the XP Explorer windows. */
+const rebar =
+  'border-b border-[#aca899] bg-[linear-gradient(180deg,#fffcf8_0%,#f0ebe0_40%,#e4dfd4_100%)] shadow-[inset_0_1px_0_#fff]'
+
+/** Flat XP toolbar button: border and gradient only on hover, sunken when pressed. */
+const toolBtn =
+  'flex h-[30px] shrink-0 cursor-default items-center gap-1 rounded-[3px] border border-transparent px-1 text-[11px] text-black enabled:hover:border-[#c2bba6] enabled:hover:bg-[linear-gradient(180deg,#ffffff_0%,#f6f4ee_55%,#e8e4d6_100%)] enabled:active:border-[#a8a08a] enabled:active:bg-[#e3dfd0] enabled:active:shadow-[inset_1px_1px_2px_rgba(0,0,0,0.18)] disabled:text-[#aca899]'
+
+const toolSep = <span className="mx-0.5 h-[26px] w-px shrink-0 bg-[#c5c2b2] shadow-[1px_0_0_#fff]" aria-hidden />
+
+const statusCell =
+  'flex h-full items-center border-l border-t border-l-[#aca899] border-t-[#aca899] border-r border-b border-r-white border-b-white'
 
 function normalizeUrl(raw) {
   const t = raw.trim()
   if (!t) return null
   if (/^javascript:/i.test(t) || /^data:/i.test(t)) return null
+  // site-relative paths (e.g. files in public/) resolve against this site
+  if (t.startsWith('/') && !t.startsWith('//')) return new URL(t, window.location.origin).href
   let u = t
   if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) {
     u = `https://${u}`
@@ -22,7 +50,8 @@ function normalizeUrl(raw) {
 }
 
 /**
- * Windows IE7-era browser workspace: command bars, address bar, Go, Refresh, iframe.
+ * Internet Explorer 6 on Windows XP: menu bar with the Windows flag, Standard Buttons,
+ * Address bar with Go and Links, a sunken page area (iframe) and the segmented status bar.
  *
  * @param {{ initialUrl?: string, onCaptionChange?: (urlDisplay: string) => void }} props
  */
@@ -38,26 +67,35 @@ export default function InternetExplorerApp({
   }))
   const [addressInput, setAddressInput] = useState(start)
   const [iframeKey, setIframeKey] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const iframeRef = useRef(null)
+  const addressWrapRef = useRef(null)
 
   const loadedUrl = history[histIdx]
 
-  const syncCaption = useCallback(
-    (href) => {
-      onCaptionChange?.(href)
-    },
-    [onCaptionChange],
-  )
+  useEffect(() => {
+    onCaptionChange?.(loadedUrl)
+  }, [loadedUrl, onCaptionChange])
 
   useEffect(() => {
-    syncCaption(loadedUrl)
-  }, [loadedUrl, syncCaption])
+    setAddressInput(loadedUrl)
+    setLoading(true)
+  }, [loadedUrl, iframeKey])
 
   useEffect(() => {
-    setAddressInput(history[histIdx])
-  }, [history, histIdx])
+    if (!historyOpen) return undefined
+    const onDoc = (event) => {
+      if (!addressWrapRef.current?.contains(event.target)) setHistoryOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [historyOpen])
 
   const navigateTo = useCallback((href) => {
+    setHistoryOpen(false)
     setNav((n) => {
+      if (n.stack[n.idx] === href) return n
       const nextStack = n.stack.slice(0, n.idx + 1)
       nextStack.push(href)
       return { stack: nextStack, idx: nextStack.length - 1 }
@@ -66,182 +104,227 @@ export default function InternetExplorerApp({
 
   const applyNavigate = useCallback(() => {
     const href = normalizeUrl(addressInput)
-    if (!href) return
-    navigateTo(href)
+    if (href) navigateTo(href)
   }, [addressInput, navigateTo])
 
-  const goBack = useCallback(() => {
-    setNav((n) => {
-      if (n.idx <= 0) return n
-      const idx = n.idx - 1
-      setAddressInput(n.stack[idx])
-      return { stack: n.stack, idx }
-    })
+  const goBack = useCallback(() => setNav((n) => (n.idx > 0 ? { ...n, idx: n.idx - 1 } : n)), [])
+  const goForward = useCallback(
+    () => setNav((n) => (n.idx < n.stack.length - 1 ? { ...n, idx: n.idx + 1 } : n)),
+    [],
+  )
+  const refresh = useCallback(() => setIframeKey((k) => k + 1), [])
+  const goHome = useCallback(() => navigateTo(start), [navigateTo, start])
+
+  const stop = useCallback(() => {
+    try {
+      iframeRef.current?.contentWindow?.stop()
+    } catch {
+      // cross-origin pages cannot be stopped from here
+    }
+    setLoading(false)
   }, [])
 
-  const goForward = useCallback(() => {
-    setNav((n) => {
-      if (n.idx >= n.stack.length - 1) return n
-      const idx = n.idx + 1
-      setAddressInput(n.stack[idx])
-      return { stack: n.stack, idx }
-    })
-  }, [])
-
-  const refresh = useCallback(() => {
-    setIframeKey((k) => k + 1)
+  const print = useCallback(() => {
+    try {
+      iframeRef.current?.contentWindow?.print()
+    } catch {
+      // cross-origin pages cannot be printed from here
+    }
   }, [])
 
   const canBack = histIdx > 0
   const canForward = histIdx < history.length - 1
-
   const menuItems = ['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']
+  const pastUrls = [...new Set(history)].reverse()
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#ece9d8] text-[11px] text-[#000]">
-      <nav
-        className="flex shrink-0 flex-wrap gap-x-3 border-b border-[#aca899] bg-[linear-gradient(180deg,#fefdfb_0%,#ece9d8_100%)] px-2 py-0.5"
-        aria-label="Menu"
-      >
-        {menuItems.map((m) => (
-          <span key={m} className="cursor-default font-normal text-[#000]">
-            {m}
-          </span>
-        ))}
-      </nav>
-
-      <div className={`flex shrink-0 flex-wrap items-center gap-1 px-1.5 py-1 ${ieToolbarBg}`}>
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            title="Back"
-            disabled={!canBack}
-            onClick={goBack}
-            className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border border-[#2a6aa8]/70 bg-[linear-gradient(180deg,#9ec8f8_0%,#5a9ae8_40%,#3d7ec8_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Back"
-          >
-            <span className="text-[12px] leading-none">◀</span>
-          </button>
-          <button
-            type="button"
-            title="Forward"
-            disabled={!canForward}
-            onClick={goForward}
-            className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border border-[#2a6aa8]/70 bg-[linear-gradient(180deg,#9ec8f8_0%,#5a9ae8_40%,#3d7ec8_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Forward"
-          >
-            <span className="text-[12px] leading-none">▶</span>
-          </button>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#ece9d8] font-xp text-[11px] text-black">
+      {/* Menu bar + throbber */}
+      <div className={`flex h-[24px] shrink-0 items-stretch justify-between ${rebar}`}>
+        <nav className="flex min-w-0 items-center overflow-hidden px-1" aria-label="Menu">
+          {menuItems.map((label) => (
+            <span
+              key={label}
+              className="cursor-default select-none whitespace-nowrap rounded-[2px] px-[7px] py-[2px] text-[11px] hover:bg-[#316ac5] hover:text-white"
+            >
+              {label}
+            </span>
+          ))}
+        </nav>
+        <div
+          className="flex w-[42px] shrink-0 items-center justify-center border-l border-[#aca899] bg-white"
+          title={loading ? 'Loading…' : 'Done'}
+        >
+          <WindowsFlag className={loading ? 'animate-pulse' : ''} />
         </div>
+      </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-0.5">
-          <label htmlFor="ie-address" className="sr-only">
-            Address
-          </label>
-          <span className="shrink-0 text-[11px] text-[#333]">Address</span>
-          <div className="flex min-w-0 flex-1 items-stretch rounded-sm border border-[#7f9db9] bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]">
+      {/* Standard Buttons */}
+      <div className={`flex h-[38px] shrink-0 items-center overflow-hidden whitespace-nowrap px-1 ${rebar}`}>
+        <button type="button" className={toolBtn} disabled={!canBack} onClick={goBack} title="Back" aria-label="Back">
+          <span className={canBack ? '' : 'opacity-80'}>
+            <NavArrowIcon dir="back" disabled={!canBack} />
+          </span>
+          <span className="hidden sm:inline">Back</span>
+          <Caret />
+        </button>
+        <button
+          type="button"
+          className={toolBtn}
+          disabled={!canForward}
+          onClick={goForward}
+          title="Forward"
+          aria-label="Forward"
+        >
+          <NavArrowIcon dir="forward" disabled={!canForward} />
+          <Caret />
+        </button>
+        <button type="button" className={toolBtn} onClick={stop} title="Stop" aria-label="Stop">
+          <StopIcon />
+        </button>
+        <button type="button" className={toolBtn} onClick={refresh} title="Refresh" aria-label="Refresh">
+          <RefreshIcon />
+        </button>
+        <button type="button" className={toolBtn} onClick={goHome} title="Home" aria-label="Home">
+          <HomeIcon />
+        </button>
+        {toolSep}
+        <button type="button" className={toolBtn} title="Search">
+          <SearchIcon />
+          <span className="hidden md:inline">Search</span>
+        </button>
+        <button type="button" className={toolBtn} title="Favorites">
+          <FavoritesIcon />
+          <span className="hidden md:inline">Favorites</span>
+        </button>
+        <button type="button" className={`${toolBtn} hidden sm:flex`} title="History" aria-label="History">
+          <HistoryIcon />
+        </button>
+        <span className="hidden sm:contents">{toolSep}</span>
+        <button type="button" className={`${toolBtn} hidden sm:flex`} title="Mail" aria-label="Mail">
+          <MailIcon />
+          <Caret />
+        </button>
+        <button type="button" className={`${toolBtn} hidden sm:flex`} onClick={print} title="Print" aria-label="Print">
+          <PrintIcon />
+        </button>
+      </div>
+
+      {/* Address bar */}
+      <div className={`flex h-[28px] shrink-0 items-center gap-1 px-1.5 ${rebar}`}>
+        <label htmlFor="ie-address" className="shrink-0 px-0.5 text-[11px] text-[#5c5346]">
+          Address
+        </label>
+        <div className="relative min-w-0 flex-1" ref={addressWrapRef}>
+          <div className="flex h-[21px] min-w-0 items-stretch border border-[#7f9db9] bg-white">
+            <img src={ieTabIcon} alt="" className="my-auto ml-1 h-4 w-4 shrink-0 object-contain" />
             <input
               id="ie-address"
               type="text"
               value={addressInput}
               onChange={(e) => setAddressInput(e.target.value)}
+              onFocus={(e) => e.target.select()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
                   applyNavigate()
                 }
               }}
-              className="min-w-0 flex-1 border-0 bg-transparent px-1.5 py-0.5 text-[11px] text-[#000] outline-none"
+              className="min-w-0 flex-1 border-0 bg-transparent px-1 font-xp text-[11px] text-black outline-none"
               spellCheck={false}
               autoComplete="off"
             />
             <button
               type="button"
-              title="History"
-              className="shrink-0 border-l border-[#b8c8e0] bg-[linear-gradient(180deg,#f2f6fc_0%,#dce8f8_100%)] px-1 text-[9px] text-[#345]"
-              aria-label="Show history"
+              onClick={() => setHistoryOpen((v) => !v)}
+              aria-label="Show address history"
+              aria-expanded={historyOpen}
+              className="my-px mr-px flex w-[17px] shrink-0 cursor-default items-center justify-center rounded-[2px] border border-[#b9cdf3] bg-[linear-gradient(180deg,#e6eefc_0%,#c4d6f8_50%,#b2c8f4_100%)] hover:brightness-105 active:brightness-95"
             >
-              ▾
+              <svg width="7" height="4" viewBox="0 0 7 4" aria-hidden>
+                <path d="M0 0h7L3.5 4z" fill="#4d6185" />
+              </svg>
             </button>
           </div>
-          <button
-            type="button"
-            title="Go"
-            onClick={applyNavigate}
-            className="flex h-[22px] w-[26px] shrink-0 items-center justify-center rounded-sm border border-[#2a7a2a] bg-[linear-gradient(180deg,#b8e8a8_0%,#48b848_45%,#2a902a_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
-            aria-label="Go"
-          >
-            <span className="text-[11px]">➤</span>
-          </button>
-          <button
-            type="button"
-            title="Refresh"
-            onClick={refresh}
-            className="flex h-[22px] w-[28px] shrink-0 items-center justify-center rounded-sm border border-[#6a8ec8] bg-[linear-gradient(180deg,#d8e8fc_0%,#88b8f0_50%,#5890d8_100%)] text-[#1a4488] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]"
-            aria-label="Refresh"
-          >
-            <span className="text-[13px] leading-none" aria-hidden>
-              ⟳
-            </span>
-          </button>
+          {historyOpen ? (
+            <ul
+              className="absolute left-0 right-0 top-full z-20 m-0 max-h-40 list-none overflow-auto border border-black bg-white p-0 shadow-[2px_2px_3px_rgba(0,0,0,0.25)]"
+              role="listbox"
+            >
+              {pastUrls.map((href) => (
+                <li key={href} className="m-0 p-0">
+                  <button
+                    type="button"
+                    className="flex w-full cursor-default items-center gap-1 px-1 py-[3px] text-left font-xp text-[11px] hover:bg-[#316ac5] hover:text-white"
+                    onClick={() => navigateTo(href)}
+                  >
+                    <img src={ieTabIcon} alt="" className="h-4 w-4 shrink-0 object-contain" />
+                    <span className="truncate">{href}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
-
-        <div className="flex shrink-0 items-center gap-0.5 border-l border-[#9bb8d8] pl-2">
-          <span className="text-[10px] text-[#345]">Search</span>
-          <div className="flex h-[22px] w-[120px] items-center rounded-sm border border-[#7f9db9] bg-white px-1 text-[10px] text-[#888] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
-            Live Search
-          </div>
-        </div>
-      </div>
-
-      <div
-        className={`flex shrink-0 items-center gap-2 border-b border-[#8fa8d0] px-2 py-1 ${ieToolbarBg}`}
-      >
-        <button
-          type="button"
-          className="flex items-center gap-0.5 rounded-sm border border-[#b8c8e0] bg-[linear-gradient(180deg,#f8fafc_0%,#e0e8f4_100%)] px-2 py-0.5 text-[10px]"
-        >
-          <span className="text-[12px] text-amber-600">★</span> Favorites
+        <button type="button" onClick={applyNavigate} className={`${toolBtn} h-[24px] pr-1.5`} title="Go to the address">
+          <GoIcon />
+          <span>Go</span>
         </button>
-        <div className="flex min-h-[26px] min-w-0 flex-1 items-center gap-1 overflow-hidden border border-[#7f9db9] bg-[linear-gradient(180deg,#f4f8fc_0%,#d8e8f8_100%)] px-1">
-          <img src={ieTabIcon} alt="" className="h-3.5 w-3.5 shrink-0 object-contain" />
-          <span className="truncate text-[10px] text-[#123]">{loadedUrl}</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5 text-[10px] text-[#234]">
-          <span title="Home">⌂</span>
-          <span title="RSS">📡</span>
-          <span title="Print">🖶</span>
-          <span>Page ▾</span>
-          <span>Safety ▾</span>
-          <span>Tools ▾</span>
-          <span title="Help" className="text-[#2563eb]">
-            ?
-          </span>
+        <span className="hidden h-[20px] w-px shrink-0 bg-[#c5c2b2] shadow-[1px_0_0_#fff] sm:block" aria-hidden />
+        <span className="hidden shrink-0 cursor-default items-center gap-1 px-1 text-[11px] text-[#5c5346] sm:flex">
+          Links <span className="text-[13px] leading-none text-black">»</span>
+        </span>
+      </div>
+
+      {/* Page area: classic sunken edge */}
+      <div className="flex min-h-0 min-w-0 flex-1 border-l border-t border-l-[#aca899] border-t-[#aca899] border-r border-b border-r-white border-b-white">
+        <div className="relative flex min-h-0 min-w-0 flex-1 border-l border-t border-l-[#716f64] border-t-[#716f64] border-r border-b border-r-[#f1efe2] border-b-[#f1efe2] bg-white">
+          <iframe
+            ref={iframeRef}
+            key={`${loadedUrl}-${iframeKey}`}
+            title="Web page"
+            src={loadedUrl}
+            onLoad={() => setLoading(false)}
+            className="h-full w-full border-0"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
       </div>
 
-      <div className="relative min-h-0 min-w-0 flex-1 bg-white">
-        <iframe
-          key={`${loadedUrl}-${iframeKey}`}
-          title="Web page"
-          src={loadedUrl}
-          className="h-full w-full border-0"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-      </div>
-
-      <footer className="flex h-5 shrink-0 items-center justify-between border-t border-[#aca899] bg-[linear-gradient(180deg,#ece9d8_0%,#dcd8c8_100%)] px-2 text-[10px] text-[#333]">
-        <div className="flex items-center gap-1">
-          <span className="text-[11px]" aria-hidden>
-            🌐
-          </span>
+      {/* Status bar */}
+      <footer className="flex h-[22px] shrink-0 items-stretch gap-[2px] bg-[#ece9d8] px-[2px] py-[2px] text-[11px] text-black">
+        <div className={`${statusCell} min-w-0 flex-1 gap-1 px-1`}>
+          <PageIcon />
+          <span className="truncate">{loading ? `Opening page ${loadedUrl}...` : 'Done'}</span>
+        </div>
+        <div className={`${statusCell} hidden w-[110px] px-[2px] sm:flex`} aria-hidden>
+          {loading ? (
+            <div className="flex h-[12px] w-full gap-[2px] overflow-hidden">
+              {Array.from({ length: 9 }, (_, i) => (
+                <span
+                  key={i}
+                  className="h-full w-[8px] shrink-0 bg-[linear-gradient(180deg,#a6e89a_0%,#3cb43c_50%,#2a922a_100%)] animate-pulse"
+                  style={{ animationDelay: `${i * 90}ms` }}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className={`${statusCell} hidden w-[22px] sm:flex`} aria-hidden />
+        <div className={`${statusCell} hidden w-[22px] sm:flex`} aria-hidden />
+        <div className={`${statusCell} w-[118px] shrink-0 gap-1 px-1`}>
+          <GlobeIcon />
           <span>Internet</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span title="Security">🔒</span>
-          <span>100%</span>
-          <span className="text-[8px]">▾</span>
-        </div>
+        <div
+          className="w-[12px] shrink-0 self-end"
+          style={{
+            height: 12,
+            background:
+              'linear-gradient(135deg, transparent 0 45%, #fff 45% 52%, #aca899 52% 60%, transparent 60% 70%, #fff 70% 76%, #aca899 76% 84%, transparent 84%)',
+          }}
+          aria-hidden
+        />
       </footer>
     </div>
   )

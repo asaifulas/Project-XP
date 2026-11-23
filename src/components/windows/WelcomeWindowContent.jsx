@@ -74,7 +74,16 @@ const PLAYGROUND_TREE = {
     {
       appId: 'playground_webpage',
       label: 'Webpage/',
-      children: [],
+      children: [
+        {
+          appId: 'playground_ats',
+          label: 'Amway ATS 3D/',
+          children: [
+            { appId: 'amway_ats_3d', label: 'index.html' },
+            { appId: 'readme_amway_ats_3d', label: 'README.md' },
+          ],
+        },
+      ],
     },
   ],
 }
@@ -128,7 +137,7 @@ const DESKTOP_GUIDE_ITEMS = [
     type: 'APP',
     typeClass: 'bg-[#245edc] text-white',
     description:
-      'XP Paint plus Edu mode for kids: A4 tracing (ABC, 123, shapes like star & pentagon), Openclipart coloring-book clipart, magnetic snap guides, and PNG save.',
+      'XP Paint plus Edu mode for kids: A4 tracing (ABC, 123, Jawi, shapes like star & pentagon, etc.), Openclipart coloring-book clipart, magnetic snap guides, and PNG save.',
     appId: 'paint',
   },
   {

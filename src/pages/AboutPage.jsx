@@ -32,7 +32,7 @@ export default function AboutPage() {
 
   const frameTitle = useMemo(() => {
     if (app?.id === 'ie') {
-      return ieCaption ? `${ieCaption} - Windows Internet Explorer` : 'Windows Internet Explorer'
+      return ieCaption ? `${ieCaption} - Microsoft Internet Explorer` : 'Microsoft Internet Explorer'
     }
     return app?.title ?? 'About'
   }, [app?.id, app?.title, ieCaption])

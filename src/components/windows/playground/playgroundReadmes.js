@@ -141,4 +141,30 @@ export const PLAYGROUND_READMES = {
       'Icon uses the plated modern mark treatment on the XP desktop.',
     ],
   },
+  readme_amway_ats_3d: {
+    title: 'Amway ATS 3D — README',
+    subtitle: 'Scroll-driven 3D product story for the Atmosphere Sky air purifier',
+    idea:
+      'A copy of the Atmosphere Sky page I built for nuna.my (/products/ats-2). Scrolling walks through 16 beats: the unit turns, opens part by part (front cover, pre-filter, HEPA, carbon, motor, back grill), shows the display and modes, a phone app, certifications and room fit. Packed as one self-contained index.html and opened here in Internet Explorer.',
+    tech: [
+      'three.js 0.187 (WebGL 2) — 11 GLB models with their authored open clips, scrubbed by an AnimationMixer',
+      'GSAP 3.15 + ScrollTrigger — one scrubbed tween maps scroll to story progress 0 → 1',
+      'Camera math in plain functions: project / solveSwap / anchorForCentre place the model, labels and phone in screen space',
+      'Canvas 2D particles for room haze and airflow, run on gsap.ticker only while visible',
+      'Astro + TypeScript source, bundled with esbuild into one IIFE; models, posters and fonts inlined as base64',
+    ],
+    howItWorks: [
+      'ScrollTrigger pins the stage and turns scroll into progress p; render(p) is a pure function that finds the beat and its local progress.',
+      'Each beat has a camera keyframe and a frame range. Crossing 10% into a beat starts a fixed 0.7 s tween, so changes play cleanly while holds stay under the reader’s scroll.',
+      'The frame index drives the model: the first part turns it to a three-quarter view, the rest scrubs every part’s open clip from assembled to exploded.',
+      'Part labels, the display lens, glow and shadow are DOM layers positioned by projecting points from the model frame, so they stay locked to the 3D unit.',
+      'When scrolling pauses near a beat’s landing point, the page glides the last few pixels onto it. The rail on the right jumps between chapters.',
+    ],
+    notes: [
+      'index.html is about 21 MB because the models are embedded; first load takes a few seconds.',
+      'Needs WebGL 2 and CSS custom properties; without them, or with reduced motion / data saver, it shows the static poster layout.',
+      'Product page only: the nuna.my header, menu and footer are stripped; the closing summary’s links still go to the live site. The 3D model is an Amway asset; this is a prototype.',
+      'Source: amway/nuna/web — src/pages/products/ats-2.astro and src/scripts/products/mountSequenceStory.ts.',
+    ],
+  },
 }

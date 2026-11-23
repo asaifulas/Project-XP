@@ -1,9 +1,11 @@
 import myComputerIcon from '../../../assets/icons/my_computer.png'
 
+/** XP "Show in Groups" heading: bold label over a blue rule that fades out to the right. */
 function SectionHeader({ title }) {
   return (
-    <h3 className="mb-1 mt-3 border-b border-[#316ac5] bg-[linear-gradient(180deg,#8ec5ff_0%,#3a7bd5_55%,#2457c5_100%)] px-2 py-[3px] text-[11px] font-bold leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] first:mt-0">
-      {title}
+    <h3 className="mb-2 mt-4 pb-[3px] text-[11px] font-bold leading-none text-[#000] first:mt-1">
+      <span className="block pb-[4px] pl-1">{title}</span>
+      <span className="block h-[2px] w-[70%] bg-[linear-gradient(90deg,#70bfff_0%,#ffffff_100%)]" aria-hidden />
     </h3>
   )
 }

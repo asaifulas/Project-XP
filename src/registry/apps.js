@@ -54,7 +54,6 @@ import WinampApp from '../components/apps/winamp/WinampApp'
 import CertiMagicApp from '../components/apps/certimagic/CertiMagicApp'
 import MyComputerContent from '../components/apps/folder/MyComputerContent'
 import AboutWindowContent from '../components/windows/AboutWindowContent'
-import BiodataWindowContent from '../components/windows/BiodataWindowContent'
 import BlankPowerPointContent from '../components/windows/BlankPowerPointContent'
 import BlankWordContent from '../components/windows/BlankWordContent'
 import WelcomeWindowContent from '../components/windows/WelcomeWindowContent'
@@ -405,7 +404,7 @@ export const APPS = [
     id: 'playground_webpage',
     title: 'Webpage',
     folderLabel: 'Webpage',
-    children: [],
+    children: ['playground_ats'],
     explorerAddressPath: 'C:\\Documents and Settings\\Desktop\\Playground\\Webpage',
   }),
   folderApp({
@@ -450,12 +449,40 @@ export const APPS = [
     children: ['certimagic', 'readme_certimagic'],
     explorerAddressPath: 'C:\\Documents and Settings\\Desktop\\Playground\\Applications\\CertMagic',
   }),
+  folderApp({
+    id: 'playground_ats',
+    title: 'Amway ATS 3D',
+    folderLabel: 'Amway ATS 3D',
+    children: ['amway_ats_3d', 'readme_amway_ats_3d'],
+    explorerAddressPath: 'C:\\Documents and Settings\\Desktop\\Playground\\Webpage\\Amway ATS 3D',
+  }),
+  {
+    id: 'amway_ats_3d',
+    path: '/amway_ats_3d',
+    page: AboutPage,
+    title: 'Atmosphere Sky 3D - Microsoft Internet Explorer',
+    icon: ieIcon,
+    group: 'Playground',
+    folderLabel: 'index.html',
+    stackable: true,
+    window: {
+      showMenuBar: false,
+      className: '',
+      shell: 'ie',
+      initialUrl: '/playground/webpage/Amway%20ATS%203D/index.html',
+    },
+    renderStack: ({ app }) =>
+      createElement(InternetExplorerApp, {
+        initialUrl: app?.window?.initialUrl ?? 'https://penyulabs.com',
+      }),
+  },
   playgroundReadme({ id: 'readme_pinball', fileName: 'README.md', readmeId: 'readme_pinball' }),
   playgroundReadme({ id: 'readme_minesweeper', fileName: 'README.md', readmeId: 'readme_minesweeper' }),
   playgroundReadme({ id: 'readme_solitaire', fileName: 'README.md', readmeId: 'readme_solitaire' }),
   playgroundReadme({ id: 'readme_winamp', fileName: 'README.md', readmeId: 'readme_winamp' }),
   playgroundReadme({ id: 'readme_paint', fileName: 'README.md', readmeId: 'readme_paint' }),
   playgroundReadme({ id: 'readme_certimagic', fileName: 'README.md', readmeId: 'readme_certimagic' }),
+  playgroundReadme({ id: 'readme_amway_ats_3d', fileName: 'README.md', readmeId: 'readme_amway_ats_3d' }),
   {
     id: 'office_word',
     path: '/word',
@@ -611,11 +638,11 @@ export const APPS = [
     desktop: { label: 'Side_Projects.ppt', order: 10 },
     stackable: true,
     window: {
-      showMenuBar: true,
+      showMenuBar: false,
       className: '',
-      shell: 'default',
+      shell: 'ppt',
     },
-    renderStack: () => createElement(BiodataWindowContent),
+    renderStack: () => createElement(BlankPowerPointContent, { title: 'Side Projects' }),
   },
   {
     id: 'acrobat_resume',

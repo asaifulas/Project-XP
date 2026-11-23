@@ -60,7 +60,7 @@ function usePhoneLayout() {
  *   `ppt-full`: Self-contained deck fills the client area (no outer slide chrome).
  *   `pdf`: Adobe Reader–style viewer (see `PdfReaderApp`).
  *   `folder`: Explorer-style host (tasks pane + main area for nested app shortcuts). Restored size uses 1024×768; maximize fills the desktop as usual.
- *   `ie`: Internet Explorer 7–style chrome with embedded browsing area (see `InternetExplorerApp`).
+ *   `ie`: Internet Explorer 6 (Windows XP) chrome with embedded browsing area (see `InternetExplorerApp`).
  *   `certimagic`: Excel-look workbook that renders app children (sheet tabs live inside the app).
  * @param {boolean} [allowMaximize]
  *   When false, maximize/restore is disabled (e.g. Calculator, Winamp). Full-screen maximize only applies to XP chrome.

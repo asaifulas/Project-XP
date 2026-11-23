@@ -7,76 +7,79 @@ import {
   FolderSelectionProvider,
   useFolderSelection,
 } from './FolderSelectionContext'
+import {
+  Caret,
+  ComputerIcon,
+  DesktopIcon,
+  DocumentsIcon,
+  FolderIcon,
+  FoldersTreeIcon,
+  GoIcon,
+  NavArrowIcon,
+  NetworkIcon,
+  NewFolderIcon,
+  PicturesIcon,
+  PublishWebIcon,
+  SearchIcon,
+  ShareFolderIcon,
+  SlideShowIcon,
+  UpFolderIcon,
+  ViewsIcon,
+  WindowsFlag,
+} from '../../window/retro/xpIcons'
 
-/** Small yellow folder glyph (XP-style) */
-function MiniFolder({ className = 'h-3.5 w-4' }) {
+/* Small XP glyphs used by the task pane and the address bar. */
+const MiniFolder = () => <FolderIcon />
+const MiniComputer = () => <ComputerIcon />
+const MiniNetwork = () => <NetworkIcon />
+
+/** Flat XP toolbar button: border and gradient only on hover, sunken when pressed (as in IE6). */
+const toolBtn =
+  'flex h-[30px] shrink-0 cursor-default items-center gap-1 rounded-[3px] border border-transparent px-1 text-[11px] text-black enabled:hover:border-[#c2bba6] enabled:hover:bg-[linear-gradient(180deg,#ffffff_0%,#f6f4ee_55%,#e8e4d6_100%)] enabled:active:border-[#a8a08a] enabled:active:bg-[#e3dfd0] enabled:active:shadow-[inset_1px_1px_2px_rgba(0,0,0,0.18)] disabled:text-[#aca899]'
+
+const toolSep = <span className="mx-0.5 h-[26px] w-px shrink-0 bg-[#c5c2b2] shadow-[1px_0_0_#fff]" aria-hidden />
+
+/** Round chevron button in a task-pane header (points up when open). */
+function PaneChevron({ open }) {
   return (
     <span
-      className={`relative inline-block shrink-0 ${className}`}
+      className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border border-[#c6d3f7] bg-white shadow-[0_1px_1px_rgba(0,0,64,0.2)]"
       aria-hidden
-      style={{
-        background:
-          'linear-gradient(180deg,#fffef0 0%,#ffe98a 35%,#e8c020 70%,#c9a010 100%)',
-        borderRadius: '1px 2px 2px 1px',
-        boxShadow:
-          'inset 0 1px 0 rgba(255,255,255,0.75), 0 1px 0 rgba(0,0,0,0.2), 1px 0 0 rgba(0,0,0,0.08)',
-        border: '1px solid #a08010',
-      }}
-    />
-  )
-}
-
-function MiniComputer({ className = 'h-3.5 w-4' }) {
-  return (
-    <span
-      className={`relative inline-block shrink-0 rounded-sm border border-[#4a6fa8] ${className}`}
-      aria-hidden
-      style={{
-        background: 'linear-gradient(180deg,#8eb8e8 0%,#5a8fd0 45%,#3d6fa8 100%)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.45)',
-      }}
-    />
-  )
-}
-
-function MiniNetwork({ className = 'h-3.5 w-4' }) {
-  return (
-    <span
-      className={`inline-block shrink-0 rounded-sm border border-[#6a8a50] ${className}`}
-      aria-hidden
-      style={{
-        background: 'linear-gradient(180deg,#c8e8a8 0%,#8fc060 50%,#5a9038 100%)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
-      }}
-    />
+    >
+      <svg width="9" height="9" viewBox="0 0 9 9">
+        <path
+          d={open ? 'M1.5 4.5 4.5 1.5l3 3M1.5 8 4.5 5l3 3' : 'M1.5 1 4.5 4l3-3M1.5 4.5 4.5 7.5l3-3'}
+          fill="none"
+          stroke="#215dc6"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
   )
 }
 
 /**
- * Collapsible task-pane block (Luna-style blue band + white title + chevron).
+ * Collapsible task-pane block in XP's default style: white-to-lavender header with a blue title
+ * and round chevron, pale lavender body.
  */
 function TaskPaneSection({ title, children: sectionChildren }) {
   const [open, setOpen] = useState(true)
 
   return (
-    <div className="mb-2 overflow-hidden rounded-t-[5px] border border-[#7aa6d8] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.12)]">
+    <div className="mb-3 overflow-hidden rounded-t-[3px]">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-default items-center justify-between gap-1 border-b border-[#2a6aa8] bg-[linear-gradient(180deg,#8fc4f0_0%,#5a9ad8_42%,#3d7ec4_100%)] px-2 py-[5px] text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]"
+        aria-expanded={open}
+        className="group flex h-[25px] w-full cursor-default items-center justify-between gap-1 bg-[linear-gradient(90deg,#ffffff_0%,#c6d3f7_100%)] pl-3 pr-1.5 text-left"
       >
-        <span className="text-[11px] font-bold leading-none tracking-tight text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">
-          {title}
-        </span>
-        <span
-          className="flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full border border-[#2a5a8e]/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.35)_0%,rgba(255,255,255,0.08)_100%)] text-[8px] font-bold leading-none text-white"
-          aria-hidden
-        >
-          {open ? '«' : '»'}
-        </span>
+        <span className="text-[11px] font-bold leading-none text-[#215dc6] group-hover:text-[#428eff]">{title}</span>
+        <PaneChevron open={open} />
       </button>
       {open ? (
-        <div className="border-t border-[#d0e4f8] bg-[linear-gradient(180deg,#f5f9ff_0%,#eef6ff_100%)] px-2 py-1.5">{sectionChildren}</div>
+        <div className="border border-t-0 border-white bg-[#d6dff7] px-3 py-2">{sectionChildren}</div>
       ) : null}
     </div>
   )
@@ -88,34 +91,17 @@ function TaskLink({ icon, label, onClick, disabled = false }) {
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={[
-        'flex w-full cursor-default items-start gap-2 rounded-sm py-0.5 pl-0.5 pr-1 text-left',
-        disabled ? 'opacity-70' : 'hover:bg-[#d6e8ff]',
-      ].join(' ')}
+      className="group flex w-full cursor-default items-start gap-1.5 py-[3px] text-left"
     >
-      <span className="mt-0.5 shrink-0">{icon}</span>
-      <span className="text-[11px] leading-snug text-[#215dc6] underline-offset-1 hover:underline">{label}</span>
-    </button>
-  )
-}
-
-/** Large green circular nav (XP Standard Buttons). */
-function NavOrb({ dir, disabled, onClick }) {
-  const arrow = dir === 'back' ? '◀' : '▶'
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      aria-label={dir === 'back' ? 'Back' : 'Forward'}
-      className={[
-        'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
-        disabled
-          ? 'cursor-default border-[#9aa899] bg-[linear-gradient(180deg,#c8d4c0_0%,#a8b4a0_55%,#909888_100%)] text-[#f0f4f0]'
-          : 'border-[#1a5a1a] bg-[radial-gradient(circle_at_35%_30%,#8fdf8f_0%,#3cb043_35%,#228b22_70%,#1a6a1a_100%)] text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.45)] hover:brightness-110',
-      ].join(' ')}
-    >
-      <span className="text-[11px] font-bold leading-none">{arrow}</span>
+      <span className="shrink-0">{icon}</span>
+      <span
+        className={[
+          'text-[11px] leading-snug text-[#215dc6]',
+          disabled ? '' : 'group-hover:text-[#428eff] group-hover:underline',
+        ].join(' ')}
+      >
+        {label}
+      </span>
     </button>
   )
 }
@@ -207,98 +193,66 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
     <FolderSelectionProvider>
     <div className="flex min-h-0 flex-1 flex-col bg-[#ece9d8] font-xp text-[11px] text-black">
       {/* Menu — Luna beige strip */}
-      <nav
-        className={`flex shrink-0 items-center justify-between gap-2 border-b border-[#aca899] px-1.5 py-0.5 ${rebarStrip}`}
-        aria-label="Menu"
-      >
-        <div className="flex flex-wrap items-center gap-0.5">
+      <div className={`flex h-[24px] shrink-0 items-stretch justify-between ${rebarStrip}`}>
+        <nav className="flex min-w-0 items-center overflow-hidden px-1" aria-label="Menu">
           {menuItems.map((label) => (
-            <button
+            <span
               key={label}
-              type="button"
-              className="cursor-default select-none rounded-sm px-1.5 py-0.5 text-[11px] text-[#1a1a1a] hover:bg-[#316ac5] hover:text-white"
+              className="cursor-default select-none whitespace-nowrap rounded-[2px] px-[7px] py-[2px] text-[11px] text-black hover:bg-[#316ac5] hover:text-white"
             >
               {label}
-            </button>
+            </span>
           ))}
+        </nav>
+        <div className="flex w-[42px] shrink-0 items-center justify-center border-l border-[#aca899] bg-white" aria-hidden>
+          <WindowsFlag />
         </div>
-        <div
-          className="hidden h-4 w-4 shrink-0 rounded-sm border border-[#9aa4b0] sm:block"
-          style={{
-            background: 'linear-gradient(135deg,#e8ecf4 0%,#b8c4d8 40%,#6a7a98 100%)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
-          }}
-          title=""
-          aria-hidden
-        />
-      </nav>
+      </div>
 
       {/* Standard Buttons toolbar */}
-      <div className={`flex shrink-0 flex-wrap items-center gap-2 px-2 py-1.5 ${rebarStrip}`}>
-        <div className="flex items-center gap-1">
-          <NavOrb dir="back" disabled={!canBack} onClick={goBack} />
-          <NavOrb dir="forward" disabled={!canForward} onClick={goForward} />
-        </div>
-        <span className="h-6 w-px shrink-0 bg-[#aca899] shadow-[1px_0_0_#fff]" />
+      <div className={`flex h-[38px] shrink-0 items-center overflow-hidden whitespace-nowrap px-1 ${rebarStrip}`}>
+        <button type="button" className={toolBtn} disabled={!canBack} onClick={goBack} title="Back" aria-label="Back">
+          <NavArrowIcon dir="back" disabled={!canBack} />
+          <span className="hidden sm:inline">Back</span>
+          <Caret />
+        </button>
+        <button type="button" className={toolBtn} disabled={!canForward} onClick={goForward} title="Forward" aria-label="Forward">
+          <NavArrowIcon dir="forward" disabled={!canForward} />
+          <Caret />
+        </button>
         <button
           type="button"
+          className={`${toolBtn} disabled:opacity-60 disabled:grayscale`}
           disabled={!canUp}
           onClick={goUp}
-          className={[
-            'flex h-7 items-center gap-0.5 rounded-sm border border-[#a89878] bg-[linear-gradient(180deg,#fffef8_0%,#ece4c8_100%)] px-1 shadow-[inset_0_1px_0_#fff]',
-            canUp ? 'hover:bg-[#d6e8ff]' : 'cursor-default opacity-70',
-          ].join(' ')}
-          aria-label="Up"
           title="Up"
+          aria-label="Up"
         >
-          <MiniFolder className="h-4 w-[18px]" />
-          <span className="text-[10px] font-bold leading-none text-[#228b22]">▲</span>
+          <UpFolderIcon />
         </button>
-        <span className="h-6 w-px shrink-0 bg-[#aca899] shadow-[1px_0_0_#fff]" />
-        <button
-          type="button"
-          disabled
-          className="flex h-7 cursor-default items-center gap-1 rounded-sm border border-[#a89878] bg-[linear-gradient(180deg,#fffef8_0%,#ece4c8_100%)] px-2 shadow-[inset_0_1px_0_#fff] disabled:opacity-70"
-        >
-          <span
-            className="relative flex h-4 w-4 items-center justify-center rounded-full border border-[#6a6a6a] bg-[linear-gradient(180deg,#f0f0f0_0%,#c8c8c8_100%)]"
-            aria-hidden
-          >
-            <span className="text-[9px] font-bold text-[#333]">⌕</span>
-          </span>
-          <span className="hidden text-[11px] sm:inline">Search</span>
+        {toolSep}
+        <button type="button" className={toolBtn} title="Search" tabIndex={-1}>
+          <SearchIcon />
+          <span className="hidden sm:inline">Search</span>
         </button>
-        <button
-          type="button"
-          disabled
-          className="flex h-7 cursor-default items-center gap-1 rounded-sm border border-[#a89878] bg-[linear-gradient(180deg,#fffef8_0%,#ece4c8_100%)] px-2 shadow-[inset_0_1px_0_#fff] disabled:opacity-70"
-        >
-          <MiniFolder className="h-4 w-[18px]" />
-          <span className="hidden text-[11px] sm:inline">Folders</span>
+        <button type="button" className={toolBtn} title="Folders" tabIndex={-1}>
+          <FoldersTreeIcon />
+          <span className="hidden sm:inline">Folders</span>
         </button>
-        <button
-          type="button"
-          disabled
-          className="ml-auto flex h-7 cursor-default items-center gap-0.5 rounded-sm border border-[#a89878] bg-[linear-gradient(180deg,#fffef8_0%,#ece4c8_100%)] px-1.5 shadow-[inset_0_1px_0_#fff] disabled:opacity-70"
-          aria-label="Views"
-        >
-          <span className="grid h-3.5 w-3.5 grid-cols-2 gap-px p-px" aria-hidden>
-            <span className="rounded-[1px] bg-[#5a7a98]" />
-            <span className="rounded-[1px] bg-[#5a7a98]" />
-            <span className="rounded-[1px] bg-[#5a7a98]" />
-            <span className="rounded-[1px] bg-[#5a7a98]" />
-          </span>
-          <span className="text-[9px] text-[#444]">▼</span>
+        {toolSep}
+        <button type="button" className={toolBtn} title="Views" aria-label="Views" tabIndex={-1}>
+          <ViewsIcon />
+          <Caret />
         </button>
       </div>
 
       {/* Address bar row */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-[#aca899] bg-[#ece9d8] px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-        <span className="shrink-0 pl-0.5 text-[11px] font-normal text-[#5c5346]">Address</span>
+      <div className={`flex h-[28px] shrink-0 items-center gap-1 px-1.5 ${rebarStrip}`}>
+        <span className="shrink-0 px-0.5 text-[11px] font-normal text-[#5c5346]">Address</span>
         <div className="relative min-w-0 flex-1" ref={addressWrapRef}>
           <form
             className={[
-              'flex min-w-0 flex-1 items-stretch overflow-hidden rounded-sm border bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)]',
+              'flex h-[21px] min-w-0 flex-1 items-stretch overflow-hidden border bg-white',
               goFailed ? 'border-[#c00]' : 'border-[#7f9db9]',
             ].join(' ')}
             onSubmit={(e) => {
@@ -306,7 +260,7 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               submitAddress()
             }}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1 px-1">
               <AddressIcon className="h-3.5 w-4 shrink-0" />
               <input
                 type="text"
@@ -326,11 +280,13 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               type="button"
               onClick={() => navActive && setHistoryOpen((v) => !v)}
               disabled={!navActive}
-              className="shrink-0 border-l border-[#7f9db9] bg-[linear-gradient(180deg,#f8f6f0_0%,#e8e4d8_100%)] px-1.5 text-[10px] text-[#333] hover:bg-[#d6e8ff] disabled:cursor-default disabled:opacity-70"
+              className="my-px mr-px flex w-[17px] shrink-0 cursor-default items-center justify-center rounded-[2px] border border-[#b9cdf3] bg-[linear-gradient(180deg,#e6eefc_0%,#c4d6f8_50%,#b2c8f4_100%)] hover:brightness-105 disabled:opacity-70"
               aria-label="Address history"
               aria-expanded={historyOpen}
             >
-              ▼
+              <svg width="7" height="4" viewBox="0 0 7 4" aria-hidden>
+                <path d="M0 0h7L3.5 4z" fill="#4d6185" />
+              </svg>
             </button>
           </form>
           {historyOpen && navActive && addressHistory.length > 0 ? (
@@ -361,21 +317,20 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
           type="button"
           onClick={submitAddress}
           disabled={!navActive}
-          className="flex shrink-0 items-center gap-1 rounded-sm border border-[#2a7a2a] bg-[linear-gradient(180deg,#d8f8c8_0%,#7cd87c_35%,#38b038_70%,#2a902a_100%)] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] hover:brightness-105 disabled:cursor-default disabled:opacity-90"
+          className={`${toolBtn} h-[24px] pr-1.5 disabled:opacity-70`}
+          title="Go to the address"
         >
-          <span className="text-[10px]" aria-hidden>
-            ▶
-          </span>
-          Go
+          <GoIcon />
+          <span>Go</span>
         </button>
       </div>
 
       {/* Task pane + content */}
       <div className="flex min-h-0 min-w-0 flex-1 border-t border-white/70">
         <aside
-          className="w-[200px] shrink-0 overflow-y-auto border-r border-[#7aa6d8] p-1.5 sm:w-[210px]"
+          className="w-[200px] shrink-0 overflow-y-auto px-3 py-3 sm:w-[210px]"
           style={{
-            background: 'linear-gradient(180deg, #d6e8ff 0%, #b8d4f4 45%, #9bb8e8 100%)',
+            background: 'linear-gradient(180deg, #7ba2e7 0%, #6375d6 100%)',
           }}
           aria-label="Tasks and other places"
         >
@@ -391,10 +346,10 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
                     />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Add or remove programs" disabled />
+                    <TaskLink icon={<DocumentsIcon />} label="Add or remove programs" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Change a setting" disabled />
+                    <TaskLink icon={<ComputerIcon />} label="Change a setting" disabled />
                   </li>
                 </ul>
               </TaskPaneSection>
@@ -405,13 +360,13 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
                     <TaskLink icon={<MiniNetwork />} label="My Network Places" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="My Documents" disabled />
+                    <TaskLink icon={<DocumentsIcon />} label="My Documents" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Shared Documents" disabled />
+                    <TaskLink icon={<FolderIcon />} label="Shared Documents" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Control Panel" disabled />
+                    <TaskLink icon={<ComputerIcon />} label="Control Panel" disabled />
                   </li>
                 </ul>
               </TaskPaneSection>
@@ -425,11 +380,11 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               <TaskPaneSection title="Picture Tasks">
                 <ul className="space-y-0">
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="View as a slide show" disabled />
+                    <TaskLink icon={<SlideShowIcon />} label="View as a slide show" disabled />
                   </li>
                   <li>
                     <TaskLink
-                      icon={<MiniFolder />}
+                      icon={<DesktopIcon />}
                       label="Set as desktop background"
                       onClick={() => setWallpaperSettingsOpen(true)}
                     />
@@ -440,10 +395,10 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               <TaskPaneSection title="File and Folder Tasks">
                 <ul className="space-y-0">
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Make a new folder" disabled />
+                    <TaskLink icon={<NewFolderIcon />} label="Make a new folder" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Publish this folder to the Web" disabled />
+                    <TaskLink icon={<PublishWebIcon />} label="Publish this folder to the Web" disabled />
                   </li>
                 </ul>
               </TaskPaneSection>
@@ -452,7 +407,7 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
                 <ul className="space-y-0">
                   <li>
                     <TaskLink
-                      icon={<MiniFolder />}
+                      icon={<PicturesIcon />}
                       label="Gallery"
                       onClick={() => {
                         const gallery = getAppById('gallery_folder')
@@ -475,13 +430,13 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               <TaskPaneSection title="File and Folder Tasks">
                 <ul className="space-y-0">
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Make a new folder" disabled />
+                    <TaskLink icon={<NewFolderIcon />} label="Make a new folder" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Publish this folder to the Web" disabled />
+                    <TaskLink icon={<PublishWebIcon />} label="Publish this folder to the Web" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Share this folder" disabled />
+                    <TaskLink icon={<ShareFolderIcon />} label="Share this folder" disabled />
                   </li>
                 </ul>
               </TaskPaneSection>
@@ -489,13 +444,13 @@ export default function FolderExplorerChrome({ addressPath, children, variant = 
               <TaskPaneSection title="Other Places">
                 <ul className="space-y-0">
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Documents and Settings" disabled />
+                    <TaskLink icon={<FolderIcon />} label="Documents and Settings" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="My Documents" disabled />
+                    <TaskLink icon={<DocumentsIcon />} label="My Documents" disabled />
                   </li>
                   <li>
-                    <TaskLink icon={<MiniFolder />} label="Shared Documents" disabled />
+                    <TaskLink icon={<FolderIcon />} label="Shared Documents" disabled />
                   </li>
                   <li>
                     <TaskLink icon={<MiniComputer />} label="My Computer" disabled />

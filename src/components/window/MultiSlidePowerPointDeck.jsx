@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 import { buildPowerPointEnterTimeline, resetPowerPointSlide } from './powerPointSlideAnimations'
+import PowerPointWorkspace from './retro/PowerPointWorkspace'
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
 
@@ -12,6 +13,9 @@ const ANIM_SCROLL_PORTION = 0.45
 const STAY_SCROLL_END = 0.82
 /** Total pinned scroll distance per slide (× viewport height). */
 const SECTION_SCROLL_MULTIPLIER = 2.15
+/** Design size of one slide; the stage scales it to fit (matches the Slides pane thumbnails). */
+const SLIDE_W = 960
+const SLIDE_H = 720
 
 /**
  * Extend timeline so scrub reaches full animation at ANIM_SCROLL_PORTION scroll progress.
@@ -82,6 +86,9 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
       pin.style.height = `${height}px`
       pin.style.width = `${width}px`
     })
+
+    // slides are laid out at a fixed 960×720 and scaled into the 4:3 frame, like PowerPoint
+    stage.style.setProperty('--slide-scale', String(width / SLIDE_W))
 
     return height
   }, [])
@@ -280,61 +287,51 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
     })
   }, [])
 
+  /**
+   * Scroll position where slide `index` has finished animating. This is a snap point,
+   * so landing here is stable (the in-between "stay" boundary is not: snap pulls it back).
+   */
+  const finishedY = useCallback((index) => {
+    const st = triggersRef.current[index]
+    return st ? st.start + (st.end - st.start) * ANIM_SCROLL_PORTION : null
+  }, [])
+
+  /** Go to a slide and show it fully built (thumbnails, Previous/Next Slide). */
   const jumpToSlide = useCallback(
     (index) => {
+      const y = finishedY(index)
+      if (y != null) {
+        scrollStageTo(y, 0.65)
+        return
+      }
       const section = sectionRefs.current[index]
-      if (!section) return
-      scrollStageTo(section, 0.65)
+      if (section) scrollStageTo(section, 0.65)
     },
-    [scrollStageTo],
+    [finishedY, scrollStageTo],
   )
 
+  /** Next: finish the current slide's build first, then move on. Previous: go back a slide. */
   const scrollByStep = useCallback(
     (direction) => {
       const idx = activeIndexRef.current
       const st = triggersRef.current[idx]
 
-      if (!st) {
-        const target = sectionRefs.current[idx + direction]
-        if (target) jumpToSlide(idx + direction)
-        return
-      }
-
-      const progress = st.progress
-      const animDone = progress >= ANIM_SCROLL_PORTION * 0.98
-      const stayDone = progress >= STAY_SCROLL_END * 0.98
-
       if (direction > 0) {
-        if (!animDone) {
-          const targetY = st.start + (st.end - st.start) * ANIM_SCROLL_PORTION
-          scrollStageTo(targetY)
+        if (st && st.progress < ANIM_SCROLL_PORTION * 0.98) {
+          scrollStageTo(finishedY(idx))
           return
         }
-        if (!stayDone) {
-          const targetY = st.start + (st.end - st.start) * STAY_SCROLL_END
-          scrollStageTo(targetY)
-          return
-        }
-        if (idx < total - 1) {
-          jumpToSlide(idx + 1)
-        }
+        if (idx < total - 1) jumpToSlide(idx + 1)
         return
       }
 
-      if (progress > STAY_SCROLL_END * 0.05) {
-        const targetY = st.start + (st.end - st.start) * ANIM_SCROLL_PORTION
-        scrollStageTo(targetY)
-        return
-      }
-      if (progress > ANIM_SCROLL_PORTION * 0.05) {
-        scrollStageTo(st.start)
-        return
-      }
       if (idx > 0) {
         jumpToSlide(idx - 1)
+      } else if (st && st.progress > 0.02) {
+        scrollStageTo(st.start)
       }
     },
-    [jumpToSlide, scrollStageTo, total],
+    [finishedY, jumpToSlide, scrollStageTo, total],
   )
 
   useEffect(() => {
@@ -353,63 +350,26 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
   }, [scrollByStep])
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-[#808080] text-[11px] text-black">
-      <nav
-        className="flex h-[22px] shrink-0 items-center gap-0.5 border-b border-black/25 bg-[linear-gradient(180deg,#ece9d8_0%,#d8d4ca_100%)] px-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
-        aria-label="PowerPoint menu"
-      >
-        {['File', 'Edit', 'View', 'Insert', 'Format', 'Tools', 'Slide Show', 'Window', 'Help'].map(
-          (m) => (
-            <button
-              key={m}
-              type="button"
-              disabled
-              aria-disabled="true"
-              className="cursor-not-allowed px-1 py-0.5 text-zinc-700 opacity-90"
-            >
-              {m}
-            </button>
-          ),
-        )}
-      </nav>
-      <div className="flex min-h-0 flex-1">
-        <aside
-          className="flex w-[112px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-black/30 bg-[#5a5a5a] p-1 no-scrollbar"
-          aria-label="Slides"
+    <PowerPointWorkspace
+      slides={slides}
+      activeIndex={activeIndex}
+      onSelect={jumpToSlide}
+      onStep={scrollByStep}
+      overlay={
+        <p
+          className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap border border-black bg-[#ffffe1] px-1.5 py-[1px] text-[11px] text-black shadow-[2px_2px_2px_rgba(0,0,0,0.25)]"
+          aria-live="polite"
         >
-          {slides.map((slide, index) => {
-            const isActive = index === activeIndex
-            return (
-              <button
-                key={slide.id}
-                type="button"
-                onClick={() => jumpToSlide(index)}
-                aria-label={`Slide ${index + 1}: ${slide.title}`}
-                aria-current={isActive ? 'true' : undefined}
-                className={[
-                  'relative aspect-[4/3] w-full overflow-hidden border-2 bg-white text-left shadow-sm transition-colors',
-                  isActive ? 'border-[#316ac5] ring-1 ring-[#316ac5]/40' : 'border-white hover:border-zinc-200',
-                ].join(' ')}
-              >
-                <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.22]">
-                  {slide.element}
-                </div>
-                <span className="absolute bottom-0 left-0 right-0 bg-black/55 px-0.5 py-px text-center text-[8px] font-semibold text-white">
-                  {index + 1}
-                </span>
-              </button>
-            )
-          })}
-        </aside>
-        <div
-          ref={stageWrapRef}
-          className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#7b7b7b]"
-        >
+          {scrollHint}
+        </p>
+      }
+    >
+      <div ref={stageWrapRef} className="absolute inset-0 flex flex-col overflow-hidden">
           <div
             ref={stageRef}
             tabIndex={0}
-            className="h-full min-h-[320px] w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#316ac5]/50"
-            aria-label="Slide stage — scroll to animate, then scroll for next slide"
+            className="no-scrollbar h-full w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#316ac5]/50"
+            aria-label={`${deckLabel} — scroll to animate, then scroll for next slide`}
           >
             {slides.map((slide, index) => (
               <section
@@ -424,13 +384,19 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
                   ref={(el) => {
                     pinRefs.current[index] = el
                   }}
-                  className="overflow-hidden bg-[#7b7b7b]"
+                  className="overflow-hidden bg-white"
                 >
                   <div
                     ref={(el) => {
                       slideRootsRef.current[index] = el
                     }}
-                    className="size-full overflow-hidden"
+                    className="overflow-hidden"
+                    style={{
+                      width: SLIDE_W,
+                      height: SLIDE_H,
+                      transform: 'scale(var(--slide-scale, 1))',
+                      transformOrigin: '0 0',
+                    }}
                   >
                     {slide.element}
                   </div>
@@ -438,34 +404,7 @@ export default function MultiSlidePowerPointDeck({ slides: slideDefs, deckLabel 
               </section>
             ))}
           </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex flex-col items-center gap-1">
-            <p className="rounded bg-black/45 px-2 py-0.5 text-[9px] font-medium text-white/90">{scrollHint}</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => scrollByStep(-1)}
-                disabled={activeIndex <= 0}
-                aria-label="Previous slide"
-                className="pointer-events-auto rounded border border-black/25 bg-[#ece9d8]/95 px-2 py-0.5 text-[10px] font-bold text-zinc-800 shadow-sm enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                ‹ Prev
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollByStep(1)}
-                disabled={activeIndex >= total - 1}
-                aria-label="Next slide"
-                className="pointer-events-auto rounded border border-black/25 bg-[#ece9d8]/95 px-2 py-0.5 text-[10px] font-bold text-zinc-800 shadow-sm enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next ›
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
-      <footer className="flex h-5 shrink-0 items-center border-t border-black/25 bg-[#ece9d8] px-2 text-[10px] text-zinc-700">
-        {deckLabel} · Slide {activeIndex + 1} of {total}
-      </footer>
-    </div>
+    </PowerPointWorkspace>
   )
 }
