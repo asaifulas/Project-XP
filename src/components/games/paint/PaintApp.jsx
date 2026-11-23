@@ -50,6 +50,7 @@ import {
   clampStrokeSize,
   clampTextSize,
   clampZoom,
+  DRAWING_GAP_CLOSE,
   drawPaintText,
   fitZoomForViewport,
   hexToRgba,
@@ -1120,7 +1121,12 @@ export default function PaintApp({ keyboardActive = true }) {
         pushUndo()
         const image = ctx.getImageData(0, 0, canvas.width, canvas.height)
         // Watercolor pour: blend from the click; more pours layer pigment in the basin.
-        const n = pourFill(image, pt.x, pt.y, hexToRgba(fg))
+        // Edu drawings are sketchy line art whose strokes often almost meet: close those
+        // small gaps so colour stays in the area that was tapped.
+        const isDrawing = eduTemplateRef.current?.kind === 'drawing'
+        const n = pourFill(image, pt.x, pt.y, hexToRgba(fg), {
+          gapClose: isDrawing ? DRAWING_GAP_CLOSE : 0,
+        })
         ctx.putImageData(image, 0, 0)
         setStatus(n ? `Poured ${n} px` : 'Nothing to fill')
         return

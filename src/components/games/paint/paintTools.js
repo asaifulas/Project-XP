@@ -141,69 +141,283 @@ function isNearBlank(rgba) {
   return rgba[0] >= 245 && rgba[1] >= 245 && rgba[2] >= 245 && rgba[3] >= 200
 }
 
+/** @returns {Uint8Array} 1 where the pixel is ink (a pour wall) */
+function pourWallMask(data, width, height) {
+  const wall = new Uint8Array(width * height)
+  for (let i = 0; i < wall.length; i += 1) {
+    const o = i * 4
+    if (isPourBarrier([data[o], data[o + 1], data[o + 2], data[o + 3]])) wall[i] = 1
+  }
+  return wall
+}
+
+/**
+ * Plain basin: every non-ink pixel 4-connected to the seed.
+ * @returns {Int32Array} pixel indices (y * width + x)
+ */
+function plainBasin(wall, width, height, seed) {
+  const out = []
+  const seen = new Uint8Array(width * height)
+  const stack = [seed]
+  seen[seed] = 1
+  while (stack.length) {
+    const i = stack.pop()
+    out.push(i)
+    const x = i % width
+    if (x > 0 && !seen[i - 1] && !wall[i - 1]) (seen[i - 1] = 1), stack.push(i - 1)
+    if (x < width - 1 && !seen[i + 1] && !wall[i + 1]) (seen[i + 1] = 1), stack.push(i + 1)
+    if (i >= width && !seen[i - width] && !wall[i - width]) (seen[i - width] = 1), stack.push(i - width)
+    if (i < width * (height - 1) && !seen[i + width] && !wall[i + width]) (seen[i + width] = 1), stack.push(i + width)
+  }
+  return Int32Array.from(out)
+}
+
+/**
+ * Chamfer (3-4) distance from each pixel to the nearest ink pixel, in thirds of a pixel.
+ * Two raster passes, so it is cheap enough to recompute on every pour.
+ */
+function inkDistance(wall, width, height) {
+  const INF = 1 << 29
+  const d = new Int32Array(width * height)
+  for (let i = 0; i < d.length; i += 1) d[i] = wall[i] ? 0 : INF
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = y * width + x
+      let v = d[i]
+      if (!v) continue
+      if (x > 0) v = Math.min(v, d[i - 1] + 3)
+      if (y > 0) {
+        v = Math.min(v, d[i - width] + 3)
+        if (x > 0) v = Math.min(v, d[i - width - 1] + 4)
+        if (x < width - 1) v = Math.min(v, d[i - width + 1] + 4)
+      }
+      d[i] = v
+    }
+  }
+  for (let y = height - 1; y >= 0; y -= 1) {
+    for (let x = width - 1; x >= 0; x -= 1) {
+      const i = y * width + x
+      let v = d[i]
+      if (!v) continue
+      if (x < width - 1) v = Math.min(v, d[i + 1] + 3)
+      if (y < height - 1) {
+        v = Math.min(v, d[i + width] + 3)
+        if (x < width - 1) v = Math.min(v, d[i + width + 1] + 4)
+        if (x > 0) v = Math.min(v, d[i + width - 1] + 4)
+      }
+      d[i] = v
+    }
+  }
+  return d
+}
+
+/**
+ * Gap-closing basin for sketchy line art whose strokes almost (but do not quite) meet.
+ *
+ * 1. Core: pixels more than `radius` px from any ink. A gap narrower than about 2×radius
+ *    has no core pixels in it, so the core region cannot leak through it.
+ * 2. The seed's core region is the one the seed lies in, or the nearest one within
+ *    radius+1 steps (a tap right next to a line still picks the area it is in).
+ * 3. Grow back: add non-ink pixels within radius+1 steps of that core, so colour reaches the
+ *    lines with no white rim. Through a closed gap it reaches at most a pixel or so past the mouth.
+ *
+ * @returns {Int32Array | null} pixel indices, or null when the seed has no core nearby
+ *   (thin strands narrower than 2×radius); the caller then tries a smaller radius.
+ */
+function gapClosedBasin(wall, dist, width, height, seed, radius) {
+  const n = width * height
+  const coreMin = Math.round(radius * 3)
+  const reach = Math.ceil(radius) + 1
+  const isCore = (i) => dist[i] > coreMin
+  const neighbours8 = (i, visit) => {
+    const x = i % width
+    const up = i >= width
+    const down = i < n - width
+    const left = x > 0
+    const right = x < width - 1
+    if (left) visit(i - 1)
+    if (right) visit(i + 1)
+    if (up) {
+      visit(i - width)
+      if (left) visit(i - width - 1)
+      if (right) visit(i - width + 1)
+    }
+    if (down) {
+      visit(i + width)
+      if (left) visit(i + width - 1)
+      if (right) visit(i + width + 1)
+    }
+  }
+
+  // 2. find the core pixel that owns the seed
+  let start = -1
+  if (isCore(seed)) {
+    start = seed
+  } else {
+    const steps = new Int16Array(n).fill(-1)
+    steps[seed] = 0
+    let frontier = [seed]
+    for (let s = 1; s <= reach && start < 0 && frontier.length; s += 1) {
+      const next = []
+      for (const i of frontier) {
+        neighbours8(i, (j) => {
+          if (steps[j] >= 0 || wall[j]) return
+          steps[j] = s
+          if (start < 0 && isCore(j)) start = j
+          next.push(j)
+        })
+        if (start >= 0) break
+      }
+      frontier = next
+    }
+    if (start < 0) return null
+  }
+
+  // 1. the core region (4-connected, so it never slips diagonally between pixels)
+  const inRegion = new Uint8Array(n)
+  const out = [start]
+  inRegion[start] = 1
+  for (let k = 0; k < out.length; k += 1) {
+    const i = out[k]
+    const x = i % width
+    if (x > 0 && !inRegion[i - 1] && isCore(i - 1)) (inRegion[i - 1] = 1), out.push(i - 1)
+    if (x < width - 1 && !inRegion[i + 1] && isCore(i + 1)) (inRegion[i + 1] = 1), out.push(i + 1)
+    if (i >= width && !inRegion[i - width] && isCore(i - width)) (inRegion[i - width] = 1), out.push(i - width)
+    if (i < n - width && !inRegion[i + width] && isCore(i + width)) (inRegion[i + width] = 1), out.push(i + width)
+  }
+
+  // 3. grow back towards the lines
+  let frontier = out.slice()
+  for (let s = 1; s <= reach && frontier.length; s += 1) {
+    const next = []
+    for (const i of frontier) {
+      neighbours8(i, (j) => {
+        if (inRegion[j] || wall[j]) return
+        inRegion[j] = 1
+        out.push(j)
+        next.push(j)
+      })
+    }
+    frontier = next
+  }
+  return Int32Array.from(out)
+}
+
+/** Largest leftover sliver (px) that is absorbed into a gap-closed fill. */
+const MAX_POCKET = 900
+
+/**
+ * Absorb white slivers the gap-closed fill could not reach: wedges where strokes cross and the
+ * space behind short stroke ends lie deeper than the grow-back distance.
+ *
+ * A leftover pocket (non-ink, unfilled, connected to the fill) is absorbed when it is small,
+ * has no core of its own (so it is not a separate area), and borders only this fill, ink or the
+ * page edge. Anything that leads on into a neighbouring area is part of a larger leftover with a
+ * core, so it is never absorbed and the gaps stay closed.
+ *
+ * @param {Int32Array} basin  gap-closed fill (pixel indices)
+ * @returns {Int32Array} basin plus absorbed pockets
+ */
+function absorbPockets(basin, wall, dist, width, height, radius) {
+  const n = width * height
+  const coreMin = Math.round(radius * 3)
+  const filled = new Uint8Array(n)
+  for (const i of basin) filled[i] = 1
+  const seen = new Uint8Array(n)
+  const extra = []
+
+  /** Visit the 4 neighbours of `i`. */
+  const each4 = (i, visit) => {
+    const x = i % width
+    if (x > 0) visit(i - 1)
+    if (x < width - 1) visit(i + 1)
+    if (i >= width) visit(i - width)
+    if (i < n - width) visit(i + width)
+  }
+
+  for (const b of basin) {
+    each4(b, (start) => {
+      if (filled[start] || wall[start] || seen[start]) return
+      // flood one leftover pocket; give up early once it is clearly a real area
+      const pocket = [start]
+      seen[start] = 1
+      let keep = true
+      for (let k = 0; k < pocket.length; k += 1) {
+        const i = pocket[k]
+        if (dist[i] > coreMin) keep = false
+        if (pocket.length > MAX_POCKET) keep = false
+        each4(i, (j) => {
+          if (seen[j] || filled[j] || wall[j]) return
+          seen[j] = 1
+          pocket.push(j)
+        })
+      }
+      if (keep) for (const i of pocket) extra.push(i)
+    })
+  }
+
+  if (!extra.length) return basin
+  const out = new Int32Array(basin.length + extra.length)
+  out.set(basin)
+  out.set(extra, basin.length)
+  return out
+}
+
+/** Gap size (canvas px, as a radius) closed for Edu coloring-book drawings. */
+export const DRAWING_GAP_CLOSE = 4
+
 /**
  * Watercolor pour: blend `pourRgba` into the contiguous non-ink basin from (x,y).
  * Near the click the pour dominates; farther pixels keep more of the existing wash.
  * Pouring again (same or new color) layers — like adding more pigment to wet paper.
+ *
+ * `opts.gapClose` (px): treat outline gaps up to about twice this wide as closed, so colour
+ * stays inside drawings whose strokes do not quite meet. Areas too thin for that radius
+ * retry with smaller radii and finally pour like a plain flood fill.
+ *
  * @param {ImageData} imageData
  * @param {number} x
  * @param {number} y
  * @param {[number, number, number, number]} pourRgba
+ * @param {{ gapClose?: number }} [opts]
  * @returns {number} pixels touched
  */
-export function pourFill(imageData, x, y, pourRgba) {
+export function pourFill(imageData, x, y, pourRgba, opts = {}) {
   const { width, height, data } = imageData
   const sx = Math.floor(x)
   const sy = Math.floor(y)
   if (sx < 0 || sy < 0 || sx >= width || sy >= height) return 0
 
-  const seed = colorAt(data, (sy * width + sx) * 4)
-  if (isPourBarrier(seed)) return 0
+  const seed = sy * width + sx
+  if (isPourBarrier(colorAt(data, seed * 4))) return 0
 
-  /** @type {number[]} */
-  const region = []
-  const seen = new Uint8Array(width * height)
-  /** @type {number[]} */
-  const stack = [sx, sy]
-  seen[sy * width + sx] = 1
-  let maxDist = 1
-  let blankCount = isNearBlank(seed) ? 1 : 0
-
-  while (stack.length) {
-    const cy = stack.pop()
-    const cx = stack.pop()
-    if (cx === undefined || cy === undefined) break
-    region.push(cx, cy)
-    for (const [dx, dy] of [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ]) {
-      const nx = cx + dx
-      const ny = cy + dy
-      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
-      const nidx = ny * width + nx
-      if (seen[nidx]) continue
-      const n = colorAt(data, nidx * 4)
-      if (isPourBarrier(n)) continue
-      seen[nidx] = 1
-      const d = Math.hypot(nx - sx, ny - sy)
-      if (d > maxDist) maxDist = d
-      if (isNearBlank(n)) blankCount += 1
-      stack.push(nx, ny)
+  const wall = pourWallMask(data, width, height)
+  let basin = null
+  const gapClose = opts.gapClose ?? 0
+  if (gapClose > 0) {
+    const dist = inkDistance(wall, width, height)
+    for (let r = gapClose; r >= 1 && !basin; r -= 1) {
+      basin = gapClosedBasin(wall, dist, width, height, seed, r)
+      if (basin) basin = absorbPockets(basin, wall, dist, width, height, r)
     }
   }
+  if (!basin) basin = plainBasin(wall, width, height, seed)
+  if (!basin.length) return 0
 
-  if (!region.length) return 0
+  let maxDist = 1
+  let blankCount = 0
+  for (const idx of basin) {
+    const d = Math.hypot((idx % width) - sx, Math.floor(idx / width) - sy)
+    if (d > maxDist) maxDist = d
+    if (isNearBlank(colorAt(data, idx * 4))) blankCount += 1
+  }
 
-  const pixelCount = region.length / 2
   // Mostly paper → solid first wash; already pigmented → local layering.
-  const blankBasin = blankCount / pixelCount >= 0.7
+  const blankBasin = blankCount / basin.length >= 0.7
   let touched = 0
-  for (let i = 0; i < region.length; i += 2) {
-    const px = region[i]
-    const py = region[i + 1]
+  for (const pix of basin) {
+    const px = pix % width
+    const py = Math.floor(pix / width)
     const dist = Math.hypot(px - sx, py - sy)
     const t = 1 - Math.min(1, dist / maxDist)
     // Soft falloff from pour point (watercolor bleed).

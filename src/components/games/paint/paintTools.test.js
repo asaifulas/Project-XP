@@ -4,6 +4,7 @@ import {
   clampTextSize,
   clampZoom,
   DEFAULT_TEXT_SIZE,
+  DRAWING_GAP_CLOSE,
   fitZoomForViewport,
   floodFill,
   hexToRgba,
@@ -134,6 +135,88 @@ describe('pourFill (watercolor blend)', () => {
     expect(top[1]).toBeGreaterThan(bottom[1])
     // Bottom still clearly reddish
     expect(bottom[0]).toBeGreaterThan(bottom[1])
+  })
+
+  describe('gap closing (Edu drawings)', () => {
+    /** Draw a filled ink rectangle. */
+    function ink(img, x0, y0, x1, y1) {
+      for (let y = y0; y <= y1; y += 1) {
+        for (let x = x0; x <= x1; x += 1) {
+          const i = (y * img.width + x) * 4
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 40
+        }
+      }
+    }
+
+    /** 60×60 paper with a 2px-thick square outline (10..49) that has a `gap`-px break in its top. */
+    function gappedBox(gap) {
+      const img = makeImageData(60, 60)
+      const mid = 30
+      const g0 = mid - Math.floor(gap / 2)
+      const g1 = g0 + gap - 1
+      ink(img, 10, 10, g0 - 1, 11) // top, left of the gap
+      ink(img, g1 + 1, 10, 49, 11) // top, right of the gap
+      ink(img, 10, 48, 49, 49) // bottom
+      ink(img, 10, 10, 11, 49) // left
+      ink(img, 48, 10, 49, 49) // right
+      return img
+    }
+
+    const red = [255, 0, 0, 255]
+    const isRed = (p) => p[0] > 200 && p[1] < 60
+
+    it('leaks through a 3px break without gap closing (the reported bug)', () => {
+      const img = gappedBox(3)
+      pourFill(img, 30, 30, red)
+      expect(isRed(pixel(img, 30, 3))).toBe(true)
+    })
+
+    it('keeps colour inside a 3px break when gap closing is on', () => {
+      const img = gappedBox(3)
+      pourFill(img, 30, 30, red, { gapClose: DRAWING_GAP_CLOSE })
+      expect(isRed(pixel(img, 30, 30))).toBe(true)
+      // reaches the outline: no white rim inside
+      expect(isRed(pixel(img, 12, 12))).toBe(true)
+      expect(isRed(pixel(img, 47, 47))).toBe(true)
+      // nothing outside the box
+      expect(isRed(pixel(img, 30, 3))).toBe(false)
+      expect(isRed(pixel(img, 3, 30))).toBe(false)
+      expect(isRed(pixel(img, 55, 55))).toBe(false)
+    })
+
+    it('still flows through a genuine opening wider than the closed gap size', () => {
+      const img = gappedBox(16)
+      pourFill(img, 30, 30, red, { gapClose: DRAWING_GAP_CLOSE })
+      expect(isRed(pixel(img, 30, 3))).toBe(true)
+    })
+
+    it('a tap right next to a line fills the area it is in', () => {
+      const img = gappedBox(3)
+      pourFill(img, 13, 30, red, { gapClose: DRAWING_GAP_CLOSE })
+      expect(isRed(pixel(img, 30, 30))).toBe(true)
+      expect(isRed(pixel(img, 30, 3))).toBe(false)
+    })
+
+    it('leaves no white specks in narrow pockets off the filled area', () => {
+      const img = gappedBox(3)
+      // a 3px-wide, 20px-deep channel open to the box interior (like the wedge between two strokes)
+      ink(img, 27, 20, 28, 42)
+      ink(img, 32, 20, 33, 42)
+      ink(img, 27, 43, 33, 44)
+      pourFill(img, 20, 30, red, { gapClose: DRAWING_GAP_CLOSE })
+      expect(isRed(pixel(img, 30, 22))).toBe(true)
+      expect(isRed(pixel(img, 30, 41))).toBe(true) // bottom of the channel
+      expect(isRed(pixel(img, 30, 3))).toBe(false) // still no leak through the 3px break
+    })
+
+    it('thin strands too narrow for the gap size still fill', () => {
+      const img = makeImageData(40, 20)
+      ink(img, 0, 5, 39, 5)
+      ink(img, 0, 9, 39, 9) // 3px-tall strand between rows 6..8
+      const n = pourFill(img, 20, 7, red, { gapClose: DRAWING_GAP_CLOSE })
+      expect(n).toBe(40 * 3)
+      expect(isRed(pixel(img, 20, 2))).toBe(false)
+    })
   })
 
   it('pouring the same color again at the top makes that side more dominant', () => {
