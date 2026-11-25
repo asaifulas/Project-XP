@@ -711,6 +711,30 @@ export default function PaintApp({ keyboardActive = true }) {
     [bg, fg, widthForDrawTool],
   )
 
+  // Mobile layout: lock browser page zoom so a child's pinch or double tap doesn't zoom the
+  // whole site. Paint's own pinch zoom uses pointer events, so it keeps working.
+  useEffect(() => {
+    if (!useMobileLayout) return undefined
+    const meta = document.querySelector('meta[name="viewport"]')
+    const prevContent = meta?.getAttribute('content') ?? null
+    meta?.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+    )
+    const html = document.documentElement
+    const prevTouchAction = html.style.touchAction
+    html.style.touchAction = 'manipulation' // no double-tap zoom
+    // iOS Safari ignores user-scalable=no; cancelling its gesture events stops page pinch zoom.
+    const block = (event) => event.preventDefault()
+    const types = ['gesturestart', 'gesturechange', 'gestureend']
+    for (const type of types) document.addEventListener(type, block, { passive: false })
+    return () => {
+      for (const type of types) document.removeEventListener(type, block)
+      html.style.touchAction = prevTouchAction
+      if (meta && prevContent !== null) meta.setAttribute('content', prevContent)
+    }
+  }, [useMobileLayout])
+
   const setPaintLayout = useCallback((layout) => {
     const next = layout === 'mobile' ? 'mobile' : 'desktop'
     setUiLayout(next)
