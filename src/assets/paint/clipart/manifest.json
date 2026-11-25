@@ -451,6 +451,90 @@
       "file": "drw-trailer.webp"
     },
     {
+      "id": "drw-aeroplane",
+      "category": "transportation",
+      "label": "Aeroplane",
+      "file": "drw-aeroplane.webp"
+    },
+    {
+      "id": "drw-fighter-jet",
+      "category": "transportation",
+      "label": "Fighter jet",
+      "file": "drw-fighter-jet.webp"
+    },
+    {
+      "id": "drw-helicopter",
+      "category": "transportation",
+      "label": "Helicopter",
+      "file": "drw-helicopter.webp"
+    },
+    {
+      "id": "drw-zeppelin",
+      "category": "transportation",
+      "label": "Zeppelin",
+      "file": "drw-zeppelin.webp"
+    },
+    {
+      "id": "drw-bus",
+      "category": "transportation",
+      "label": "City bus",
+      "file": "drw-bus.webp"
+    },
+    {
+      "id": "drw-school-bus",
+      "category": "transportation",
+      "label": "School bus",
+      "file": "drw-school-bus.webp"
+    },
+    {
+      "id": "drw-f1-car",
+      "category": "transportation",
+      "label": "Race car",
+      "file": "drw-f1-car.webp"
+    },
+    {
+      "id": "drw-scooter",
+      "category": "transportation",
+      "label": "Scooter",
+      "file": "drw-scooter.webp"
+    },
+    {
+      "id": "drw-fire-truck",
+      "category": "transportation",
+      "label": "Fire truck",
+      "file": "drw-fire-truck.webp"
+    },
+    {
+      "id": "drw-tow-truck",
+      "category": "transportation",
+      "label": "Tow truck",
+      "file": "drw-tow-truck.webp"
+    },
+    {
+      "id": "drw-street-sweeper",
+      "category": "transportation",
+      "label": "Street sweeper",
+      "file": "drw-street-sweeper.webp"
+    },
+    {
+      "id": "drw-crane",
+      "category": "transportation",
+      "label": "Crane",
+      "file": "drw-crane.webp"
+    },
+    {
+      "id": "drw-excavator",
+      "category": "transportation",
+      "label": "Excavator",
+      "file": "drw-excavator.webp"
+    },
+    {
+      "id": "drw-road-roller",
+      "category": "transportation",
+      "label": "Road roller",
+      "file": "drw-road-roller.webp"
+    },
+    {
       "id": "drw-kl",
       "category": "buildings",
       "label": "Kuala Lumpur",

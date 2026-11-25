@@ -73,13 +73,16 @@ function buildCategories(accept) {
     if (!byCat[cat]) byCat[cat] = []
     byCat[cat].push({ id: item.id, label: item.label })
   }
+  const byLabel = (a, b) => a.label.localeCompare(b.label, 'en', { sensitivity: 'base', numeric: true })
+  // Menus list categories and the pictures inside them A → Z by their shown name.
   return Object.keys(CATEGORY_LABELS)
     .filter((id) => byCat[id]?.length)
     .map((id) => ({
       id,
       label: CATEGORY_LABELS[id],
-      items: byCat[id],
+      items: [...byCat[id]].sort(byLabel),
     }))
+    .sort(byLabel)
 }
 
 export const EDU_CLIPART_CATEGORIES = buildCategories((id) => Boolean(SVG_BY_ID[id]))
