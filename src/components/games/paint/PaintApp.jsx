@@ -271,6 +271,25 @@ export default function PaintApp({ keyboardActive = true }) {
     [],
   )
 
+  /** Clean copy of the current Edu page (white paper + guide), cached per page and style. */
+  const guideCacheRef = useRef(/** @type {{ key: string, canvas: HTMLCanvasElement } | null} */ (null))
+  const eduGuideCanvas = useCallback(() => {
+    const template = eduTemplateRef.current
+    if (!template) return null
+    const key = `${template.id ?? template.label}:${eduLineType}:${eduGuideSize}`
+    if (guideCacheRef.current?.key === key) return guideCacheRef.current.canvas
+    const canvas = document.createElement('canvas')
+    canvas.width = EDU_A4_W
+    canvas.height = EDU_A4_H
+    const gctx = canvas.getContext('2d')
+    if (!gctx) return null
+    gctx.fillStyle = '#ffffff'
+    gctx.fillRect(0, 0, canvas.width, canvas.height)
+    drawEduTemplate(gctx, template, eduLineType, eduGuideSize)
+    guideCacheRef.current = { key, canvas }
+    return canvas
+  }, [eduGuideSize, eduLineType])
+
   const restoreColoringLines = useCallback(() => {
     const template = eduTemplateRef.current
     const ctx = getCtx()
@@ -690,7 +709,10 @@ export default function PaintApp({ keyboardActive = true }) {
       ctx.lineWidth = opts.width ?? widthForDrawTool(drawTool)
       if (opts.erase || drawTool === 'eraser') {
         ctx.globalCompositeOperation = 'source-over'
-        ctx.strokeStyle = bg
+        // Edu page: erase back to the clean guide (dots, shadow letter, line art), not to blank paper.
+        const guide = eduGuideCanvas()
+        const pattern = guide ? ctx.createPattern(guide, 'no-repeat') : null
+        ctx.strokeStyle = pattern ?? bg
       } else {
         ctx.strokeStyle = opts.color ?? fg
       }
@@ -708,7 +730,7 @@ export default function PaintApp({ keyboardActive = true }) {
       }
       ctx.restore()
     },
-    [bg, fg, widthForDrawTool],
+    [bg, eduGuideCanvas, fg, widthForDrawTool],
   )
 
   // Mobile layout: lock browser page zoom so a child's pinch or double tap doesn't zoom the
